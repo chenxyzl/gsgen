@@ -45,3 +45,27 @@ func (s *TestB) SetN(v *TestA) {
 		v.SetSelfDirtyIdx(2, s.UpdateDirty)
 	}
 }
+func (s *TestC) GetId() uint64 {
+	return s.id
+}
+func (s *TestC) SetId(v uint64) {
+	s.id = v
+	s.UpdateDirty(0)
+}
+func (s *TestC) GetM() string {
+	return s.m
+}
+func (s *TestC) SetM(v string) {
+	s.m = v
+	s.UpdateDirty(1)
+}
+func (s *TestC) GetN() *TestB {
+	return s.n
+}
+func (s *TestC) SetN(v *TestB) {
+	s.n = v
+	s.UpdateDirty(2)
+	if v != nil {
+		v.SetSelfDirtyIdx(2, s.UpdateDirty)
+	}
+}
