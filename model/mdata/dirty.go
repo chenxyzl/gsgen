@@ -56,5 +56,4 @@ func (this *DirtyModel) CleanDirty() {
 	} else {
 		this.dirty = 0
 	}
-	//todo 对子对象递归调用cleanDirty
 }

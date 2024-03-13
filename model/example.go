@@ -17,7 +17,7 @@ type TestB struct {
 }
 type TestC struct {
 	id               uint64 `bson:"_id"`
-	m                string `bson:"m"`
-	n                *TestB `bson:"n"` // 内嵌结构体类型 B
+	x                string `bson:"x"`
+	y                *TestB `bson:"y"` // 内嵌结构体类型 B
 	mdata.DirtyModel `bson:"-"`
 }

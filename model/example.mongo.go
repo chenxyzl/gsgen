@@ -56,8 +56,8 @@ func (m *TestB) UnmarshalBSON(data []byte) error {
 func (m *TestC) MarshalBSON() ([]byte, error) {
 	doc := bson.M{
 		"_id": m.id,
-		"m":   m.m,
-		"n":   m.n,
+		"x":   m.x,
+		"y":   m.y,
 	}
 	return bson.Marshal(doc)
 }
@@ -67,19 +67,19 @@ func (m *TestC) UnmarshalBSON(data []byte) error {
 		return err
 	}
 	m.SetId(uint64(doc["_id"].(int64)))
-	m.SetM(doc["m"].(string))
+	m.SetX(doc["x"].(string))
 	//The problem is here
 	//repeated Marshal and Unmarshal
 	//convert primitive.M to struct TestA
 	//todo 需要更优雅的方法
-	if dat, err := bson.Marshal(doc["n"]); err != nil {
+	if dat, err := bson.Marshal(doc["y"]); err != nil {
 		return err
 	} else {
-		var n TestB
-		if err := bson.Unmarshal(dat, &n); err != nil {
+		var y TestB
+		if err := bson.Unmarshal(dat, &y); err != nil {
 			return err
 		}
-		m.SetN(&n)
+		m.SetY(&y)
 	}
 	return nil
 }

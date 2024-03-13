@@ -1,4 +1,4 @@
-package main
+package test2
 
 import (
 	"context"
@@ -29,8 +29,8 @@ func TestMongoLoadSave(t *testing.T) {
 	b.SetN(&a)
 	c := model.TestC{}
 	c.SetId(789)
-	c.SetM("444")
-	c.SetN(&b)
+	c.SetX("444")
+	c.SetY(&b)
 	s, e := bson.Marshal(&c)
 	if e != nil {
 		panic(e)
