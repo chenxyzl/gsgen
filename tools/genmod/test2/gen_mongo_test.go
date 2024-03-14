@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gotest/model"
+	"gotest/model/mdata"
 	"gotest/tools/genmod/mongo_helper"
 	"log"
 	"math"
@@ -27,6 +28,12 @@ func TestMongoLoadSave(t *testing.T) {
 	b.SetId(456)
 	b.SetM("333")
 	b.SetN(&a)
+
+	v := &model.TestA{}
+	b.SetC(mdata.NewList[*model.TestA]())
+	b.GetC().Append(v)
+	b.GetC().Set(0, v)
+
 	c := model.TestC{}
 	c.SetId(789)
 	c.SetX("444")
@@ -41,19 +48,21 @@ func TestMongoLoadSave(t *testing.T) {
 		panic(e)
 	}
 
-	mongo_helper.Connect("mongodb+srv://ichenzhl:Qwert321@cluster0.feqwf3z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
-	defer mongo_helper.Close()
-	col := mongo_helper.GetCol("test", "model")
+	if false {
+		mongo_helper.Connect("mongodb+srv://ichenzhl:Qwert321@cluster0.feqwf3z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+		defer mongo_helper.Close()
+		col := mongo_helper.GetCol("test", "model")
 
-	filter := bson.M{"_id": c.GetId()}
-	_, err := col.ReplaceOne(context.TODO(), filter, &c, options.Replace().SetUpsert(true))
-	if err != nil {
-		log.Fatal(err)
+		filter := bson.M{"_id": c.GetId()}
+		_, err := col.ReplaceOne(context.TODO(), filter, &c, options.Replace().SetUpsert(true))
+		if err != nil {
+			log.Fatal(err)
+		}
+		zz := model.TestC{}
+		err = col.FindOne(context.TODO(), filter).Decode(&zz)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(zz)
 	}
-	zz := model.TestC{}
-	err = col.FindOne(context.TODO(), filter).Decode(&zz)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(zz)
 }

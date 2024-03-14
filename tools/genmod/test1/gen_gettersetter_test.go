@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"gotest/tools/genmod/test1/internal"
 	"log"
 	"os"
 	"path/filepath"
@@ -479,4 +480,18 @@ func addHeader(buffer *bytes.Buffer) {
 	buffer.WriteString(fmt.Sprintf("// generate time: %s\n", time.Now().Format("2006-01-02 15:04:05")))
 	buffer.WriteString(fmt.Sprintf("// src code version: %s\n", ""))
 	buffer.WriteString(fmt.Sprintf("// src code commit time : %s\n", ""))
+}
+
+func TestCopyData(t *testing.T) {
+	a := internal.TestS{}
+	a.SetX(1)
+	b := a
+	fmt.Println(a)
+	fmt.Println(b)
+	fmt.Println("")
+	a.SetX(2)
+	b.SetX(3)
+	fmt.Println(a)
+	fmt.Println(b)
+	fmt.Println("")
 }

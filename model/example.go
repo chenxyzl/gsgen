@@ -6,8 +6,6 @@ type TestA struct {
 	id               uint64 `bson:"_id"`
 	a                int64  `bson:"a"`
 	b                int32  `bson:"b"`
-	c                *mdata.MList[int]
-	d                *mdata.MMap[int, int]
 	mdata.DirtyModel `bson:"-"`
 }
 
@@ -15,6 +13,8 @@ type TestB struct {
 	id               uint64 `bson:"_id"`
 	m                string `bson:"m"`
 	n                *TestA `bson:"n"` // 内嵌结构体类型 A
+	c                *mdata.MList[*TestA]
+	d                *mdata.MMap[uint64, *TestA]
 	mdata.DirtyModel `bson:"-"`
 }
 type TestC struct {

@@ -6,8 +6,8 @@ type MMap[K comparable, v any] struct {
 	//
 	dirty        map[K]bool
 	dirtyAll     bool
-	selfDirtyIdx uint64
-	dirtyParent  DirtyParentFunc
+	selfDirtyIdx K
+	dirtyParent  DirtyParentFunc[K]
 }
 
 func NewMMap[K comparable, V any]() *MMap[K, V] {
@@ -28,7 +28,7 @@ func (this *MMap[K, V]) Reset() {
 		return
 	}
 	this.data = make(map[K]V)
-	this.updateDirtyAll()
+	this.UpdateDirtyAll()
 }
 
 // Get 设置值
@@ -45,9 +45,10 @@ func (this *MMap[K, V]) Set(k K, v V) {
 		panic("map is nil")
 	}
 	//todo v的类型如果是非基本类型则需要设置dirtyParent
+	//CheckCallDirty(v, 0, this.UpdateDirty)
 	this.data[k] = v
 	//
-	this.updateDirty(k)
+	this.UpdateDirty(k)
 }
 
 // Remove 删除 注:因为删除不太好处理list对应的mongo的更新,所以这里用了DirtyAll
@@ -59,7 +60,7 @@ func (this *MMap[K, V]) Delete(k K) {
 		return
 	}
 	delete(this.data, k)
-	this.updateDirty(k)
+	this.UpdateDirty(k)
 }
 
 // Range 遍历
@@ -75,14 +76,28 @@ func (this *MMap[K, V]) Range(f func(K, V)) {
 	}
 }
 
-// SetSelfDirtyIdx 设置父节点
-func (this *MMap[K, V]) SetSelfDirtyIdx(idx uint64, dirtyParentFunc DirtyParentFunc) {
+func (this MMap[K, v]) SetSelfDirtyIdx(idx K, dirtyParentFunc DirtyParentFunc[K]) {
+	if this.dirtyParent != nil {
+		panic("model被重复设置了父节点,请先从老节点移除")
+	}
 	this.selfDirtyIdx = idx
 	this.dirtyParent = dirtyParentFunc
 }
 
+func (this MMap[K, v]) IsDirty() bool {
+	return len(this.dirty) > 0 || this.dirtyAll
+}
+
+func (this MMap[K, v]) IsDirtyAll() bool {
+	return this.dirtyAll
+}
+
+func (this MMap[K, v]) DirtyAll() {
+	this.dirtyAll = true
+}
+
 // updateDirty 更新藏标记
-func (this *MMap[K, V]) updateDirty(k K) {
+func (this *MMap[K, V]) UpdateDirty(k K) {
 	//如果已经allDirty了就不用管了
 	if this.dirtyAll || this.dirty[k] {
 		return
@@ -92,7 +107,7 @@ func (this *MMap[K, V]) updateDirty(k K) {
 		this.dirtyParent.Invoke(this.selfDirtyIdx)
 	}
 }
-func (this *MMap[K, V]) updateDirtyAll() {
+func (this *MMap[K, V]) UpdateDirtyAll() {
 	if this.dirtyAll {
 		return
 	}
