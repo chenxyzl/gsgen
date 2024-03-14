@@ -120,5 +120,11 @@ func (this *MMap[K, V]) CleanDirty() {
 	if this == nil {
 		return
 	}
+	var v V
+	if _, ok := (any(v)).(IDirtyModel[uint64]); ok {
+		this.Range(func(k K, v V) {
+			(any(v)).(IDirtyModel[uint64]).CleanDirty()
+		})
+	}
 	clear(this.dirty)
 }

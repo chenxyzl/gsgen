@@ -90,7 +90,7 @@ func (this *MList[T]) Remove(idx int) {
 }
 
 // Range 遍历
-func (this *MList[T]) Range(f func(idx int, value T)) {
+func (this *MList[T]) Range(f func(idx int, v T)) {
 	if this == nil {
 		panic("MList is nil")
 	}
@@ -140,6 +140,12 @@ func (this *MList[T]) UpdateDirtyAll() {
 func (this *MList[T]) CleanDirty() {
 	if this == nil {
 		return
+	}
+	var v T
+	if _, ok := (any(v)).(IDirtyModel[uint64]); ok {
+		this.Range(func(idx int, v T) {
+			(any(v)).(IDirtyModel[uint64]).CleanDirty()
+		})
 	}
 	clear(this.dirty)
 }

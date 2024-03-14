@@ -32,7 +32,12 @@ func TestMongoLoadSave(t *testing.T) {
 	v := &model.TestA{}
 	b.SetC(mdata.NewList[*model.TestA]())
 	b.GetC().Append(v)
-	b.GetC().Set(0, v)
+	//b.GetC().Set(0, v)
+
+	b.SetD(mdata.NewMMap[uint64, *model.TestA]())
+	b.GetD().Set(1, &model.TestA{})
+
+	b.CleanDirty()
 
 	c := model.TestC{}
 	c.SetId(789)
