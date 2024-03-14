@@ -9,18 +9,13 @@ type MList[T any] struct {
 	data []T `bson:"data"`
 	//
 	dirty        map[uint64]bool
+	dirtyAll     bool
 	selfDirtyIdx uint64
 	dirtyParent  DirtyParentFunc
 }
 
 func NewList[T any]() *MList[T] {
 	return &MList[T]{data: make([]T, 0), dirty: make(map[uint64]bool)}
-}
-
-// SetSelfDirtyIdx 设置父节点
-func (this *MList[T]) SetSelfDirtyIdx(idx uint64, dirtyParentFunc DirtyParentFunc) {
-	this.selfDirtyIdx = idx
-	this.dirtyParent = dirtyParentFunc
 }
 
 // Len 长度
@@ -37,7 +32,7 @@ func (this *MList[T]) Reset() {
 		return
 	}
 	this.data = make([]T, 0)
-	this.updateDirty(DirtyAll)
+	this.updateDirtyAll()
 }
 
 // Get 设置值
@@ -107,13 +102,35 @@ func (this *MList[T]) Range(f func(idx int, value T)) {
 	}
 }
 
+// SetSelfDirtyIdx 设置父节点
+func (this *MList[T]) SetSelfDirtyIdx(idx uint64, dirtyParentFunc DirtyParentFunc) {
+	this.selfDirtyIdx = idx
+	this.dirtyParent = dirtyParentFunc
+}
+
 // updateDirty 更新藏标记
 func (this *MList[T]) updateDirty(n uint64) {
-	if this.dirty[n] {
+	//如果已经allDirty了就不用管了
+	if this.dirtyAll || this.dirty[n] {
 		return
 	}
 	this.dirty[n] = true
 	if this.dirtyParent != nil {
 		this.dirtyParent.Invoke(this.selfDirtyIdx)
 	}
+}
+func (this *MList[T]) updateDirtyAll() {
+	if this.dirtyAll {
+		return
+	}
+	this.dirtyAll = true
+	if this.dirtyParent != nil {
+		this.dirtyParent.Invoke(this.selfDirtyIdx)
+	}
+}
+func (this *MList[T]) CleanDirty() {
+	if this == nil {
+		return
+	}
+	clear(this.dirty)
 }

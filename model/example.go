@@ -6,6 +6,8 @@ type TestA struct {
 	id               uint64 `bson:"_id"`
 	a                int64  `bson:"a"`
 	b                int32  `bson:"b"`
+	c                *mdata.MList[int]
+	d                *mdata.MMap[int, int]
 	mdata.DirtyModel `bson:"-"`
 }
 

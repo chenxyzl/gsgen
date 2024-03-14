@@ -14,12 +14,6 @@ func NewMMap[K comparable, V any]() *MMap[K, V] {
 	return &MMap[K, V]{data: make(map[K]V), dirty: make(map[K]bool)}
 }
 
-// SetSelfDirtyIdx 设置父节点
-func (this *MMap[K, V]) SetSelfDirtyIdx(idx uint64, dirtyParentFunc DirtyParentFunc) {
-	this.selfDirtyIdx = idx
-	this.dirtyParent = dirtyParentFunc
-}
-
 // Len 长度
 func (this *MMap[K, V]) Len() int {
 	if this == nil {
@@ -81,6 +75,12 @@ func (this *MMap[K, V]) Range(f func(K, V)) {
 	}
 }
 
+// SetSelfDirtyIdx 设置父节点
+func (this *MMap[K, V]) SetSelfDirtyIdx(idx uint64, dirtyParentFunc DirtyParentFunc) {
+	this.selfDirtyIdx = idx
+	this.dirtyParent = dirtyParentFunc
+}
+
 // updateDirty 更新藏标记
 func (this *MMap[K, V]) updateDirty(k K) {
 	//如果已经allDirty了就不用管了
@@ -100,4 +100,10 @@ func (this *MMap[K, V]) updateDirtyAll() {
 	if this.dirtyParent != nil {
 		this.dirtyParent.Invoke(this.selfDirtyIdx)
 	}
+}
+func (this *MMap[K, V]) CleanDirty() {
+	if this == nil {
+		return
+	}
+	clear(this.dirty)
 }
