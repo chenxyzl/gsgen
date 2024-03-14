@@ -141,7 +141,7 @@ func (this *MList[T]) CleanDirty() {
 	if this == nil {
 		return
 	}
-	var v T
+	var v T //todo 类型不一定是uint64
 	if _, ok := (any(v)).(IDirtyModel[uint64]); ok {
 		this.Range(func(idx int, v T) {
 			(any(v)).(IDirtyModel[uint64]).CleanDirty()

@@ -120,7 +120,7 @@ func (this *MMap[K, V]) CleanDirty() {
 	if this == nil {
 		return
 	}
-	var v V
+	var v V //类型不一定是uint64
 	if _, ok := (any(v)).(IDirtyModel[uint64]); ok {
 		this.Range(func(k K, v V) {
 			(any(v)).(IDirtyModel[uint64]).CleanDirty()
