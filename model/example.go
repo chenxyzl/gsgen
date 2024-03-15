@@ -14,7 +14,7 @@ type TestB struct {
 	m                string `bson:"m"`
 	n                *TestA `bson:"n"` // 内嵌结构体类型 A
 	c                *mdata.MList[*TestA]
-	d                *mdata.MMap[uint64, *TestA]
+	d                *mdata.MMap[string, *TestA, uint64]
 	mdata.DirtyModel `bson:"-"`
 }
 type TestC struct {

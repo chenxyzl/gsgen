@@ -180,7 +180,7 @@ func generateGettersAndSetters(file *ast.File, structTypeExpr *ast.Ident, struct
 						List: []ast.Stmt{
 							&ast.ExprStmt{
 								X: &ast.CallExpr{
-									Fun: ast.NewIdent("v.SetSelfDirtyIdx"),
+									Fun: ast.NewIdent("v.SetParent"),
 									Args: []ast.Expr{
 										&ast.BasicLit{
 											Kind:  token.INT,
