@@ -10,8 +10,8 @@ type MList[T any] struct {
 	//
 	dirty            map[uint64]bool
 	dirtyAll         bool
-	inParentDirtyIdx uint64
-	dirtyParent      DirtyParentFunc[uint64]
+	inParentDirtyIdx any
+	dirtyParent      DirtyParentFunc
 }
 
 func NewList[T any]() *MList[T] {
@@ -32,7 +32,7 @@ func (this *MList[T]) Reset() {
 		return
 	}
 	this.data = make([]T, 0)
-	this.UpdateDirtyAll()
+	this.updateDirtyAll()
 }
 
 // Get 设置值
@@ -57,9 +57,9 @@ func (this *MList[T]) Set(idx uint64, v T) {
 		panic(fmt.Sprintf("MList set idx out of range, len:%d|idx:%d", l, idx))
 	}
 	//
-	CheckCallDirty[uint64](v, idx, this.UpdateDirty)
+	CheckCallDirty(v, idx, this.updateDirty)
 	this.data[idx] = v
-	this.UpdateDirty(idx)
+	this.updateDirty(idx)
 }
 
 // Append 追加
@@ -70,9 +70,9 @@ func (this *MList[T]) Append(vs ...T) {
 	for _, v := range vs {
 		idx := uint64(this.Len())
 		//
-		CheckCallDirty[uint64](v, idx, this.UpdateDirty)
+		CheckCallDirty(v, idx, this.updateDirty)
 		this.data = append(this.data, v)
-		this.UpdateDirty(idx)
+		this.updateDirty(idx)
 	}
 }
 
@@ -86,11 +86,11 @@ func (this *MList[T]) Remove(idx int) {
 		panic(fmt.Sprintf("MList remove idx out of range, len:%d|idx:%d", l, idx))
 	}
 	this.data = append(this.data[0:idx], this.data[idx+1:]...)
-	this.UpdateDirtyAll()
+	this.updateDirtyAll()
 }
 
 // Range 遍历
-func (this *MList[T]) Range(f func(idx int, v T)) {
+func (this *MList[T]) Range(f func(idx int, v T) bool) {
 	if this == nil {
 		panic("MList is nil")
 	}
@@ -98,11 +98,13 @@ func (this *MList[T]) Range(f func(idx int, v T)) {
 		return
 	}
 	for idx, v := range this.data {
-		f(idx, v)
+		if _continue := f(idx, v); !_continue {
+			break
+		}
 	}
 }
 
-func (this *MList[T]) SetParent(idx uint64, dirtyParentFunc DirtyParentFunc[uint64]) {
+func (this *MList[T]) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
 	if this.dirtyParent != nil {
 		panic("model被重复设置了父节点,请先从老节点移除")
 	}
@@ -114,11 +116,22 @@ func (this *MList[T]) IsDirty() bool {
 	return len(this.dirty) > 0
 }
 
-func (this *MList[T]) IsDirtyAll() bool {
-	return this.dirtyAll
+func (this *MList[T]) CleanDirty() {
+	if this == nil {
+		return
+	}
+	var v T //todo 类型不一定是uint64
+	if _, ok := (any(v)).(IDirtyModel); ok {
+		this.Range(func(idx int, v T) bool {
+			(any(v)).(IDirtyModel).CleanDirty()
+			return true
+		})
+	}
+	clear(this.dirty)
 }
 
-func (this *MList[T]) UpdateDirty(n uint64) {
+func (this *MList[T]) updateDirty(a any) {
+	n := a.(uint64)
 	//如果已经allDirty了就不用管了
 	if this.dirtyAll || this.dirty[n] {
 		return
@@ -128,7 +141,8 @@ func (this *MList[T]) UpdateDirty(n uint64) {
 		this.dirtyParent.Invoke(this.inParentDirtyIdx)
 	}
 }
-func (this *MList[T]) UpdateDirtyAll() {
+
+func (this *MList[T]) updateDirtyAll() {
 	if this.dirtyAll {
 		return
 	}
@@ -136,16 +150,4 @@ func (this *MList[T]) UpdateDirtyAll() {
 	if this.dirtyParent != nil {
 		this.dirtyParent.Invoke(this.inParentDirtyIdx)
 	}
-}
-func (this *MList[T]) CleanDirty() {
-	if this == nil {
-		return
-	}
-	var v T //todo 类型不一定是uint64
-	if _, ok := (any(v)).(IDirtyModel[uint64]); ok {
-		this.Range(func(idx int, v T) {
-			(any(v)).(IDirtyModel[uint64]).CleanDirty()
-		})
-	}
-	clear(this.dirty)
 }

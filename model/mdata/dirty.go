@@ -6,9 +6,9 @@ import (
 
 const DirtyAll = math.MaxUint64
 
-type DirtyParentFunc[T comparable] func(dirtyIdx T)
+type DirtyParentFunc func(dirtyIdx any)
 
-func (f DirtyParentFunc[T]) Invoke(dirtyIdx T) {
+func (f DirtyParentFunc) Invoke(dirtyIdx any) {
 	if f != nil {
 		f(dirtyIdx)
 	}
@@ -17,11 +17,11 @@ func (f DirtyParentFunc[T]) Invoke(dirtyIdx T) {
 // DirtyModel ------------------dirtyModel脏标记
 type DirtyModel struct {
 	dirty            uint64
-	inParentDirtyIdx uint64
-	dirtyParent      DirtyParentFunc[uint64]
+	inParentDirtyIdx any
+	dirtyParent      DirtyParentFunc
 }
 
-func (this *DirtyModel) SetParent(idx uint64, dirtyParentFunc DirtyParentFunc[uint64]) {
+func (this *DirtyModel) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
 	if this.dirtyParent != nil {
 		panic("model被重复设置了父节点,请先从老节点移除")
 	}
@@ -30,24 +30,6 @@ func (this *DirtyModel) SetParent(idx uint64, dirtyParentFunc DirtyParentFunc[ui
 }
 func (this *DirtyModel) IsDirty() bool {
 	return this.dirty > 0
-}
-func (this *DirtyModel) IsDirtyAll() bool {
-	return this.dirty&DirtyAll == DirtyAll
-}
-func (this *DirtyModel) UpdateDirtyAll() {
-	if this == nil {
-		return
-	}
-	this.UpdateDirty(DirtyAll)
-}
-func (this *DirtyModel) UpdateDirty(n uint64) {
-	if this.dirty&n == n {
-		return
-	}
-	this.dirty |= n
-	if this.dirtyParent != nil {
-		this.dirtyParent.Invoke(this.inParentDirtyIdx)
-	}
 }
 func (this *DirtyModel) CleanDirty() {
 	if this == nil {
@@ -58,5 +40,15 @@ func (this *DirtyModel) CleanDirty() {
 		return
 	} else {
 		this.dirty = 0
+	}
+}
+func (this *DirtyModel) UpdateDirty(tn any) {
+	n := uint64(tn.(int))
+	if this.dirty&n == n {
+		return
+	}
+	this.dirty |= n
+	if this.dirtyParent != nil {
+		this.dirtyParent.Invoke(this.inParentDirtyIdx)
 	}
 }

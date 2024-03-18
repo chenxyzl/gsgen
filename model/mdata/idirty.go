@@ -4,21 +4,18 @@ package mdata
 type testDirtyModel struct{ DirtyModel }
 
 // check
-var _ IDirtyModel[uint64] = &testDirtyModel{}
-var _ IDirtyModel[uint64] = &MList[int]{}
-var _ IDirtyModel[int] = &MMap[int, int, int]{}
+var _ IDirtyModel = (*testDirtyModel)(nil)
+var _ IDirtyModel = (*MList[int])(nil)
+var _ IDirtyModel = (*MMap[int, int])(nil)
 
-type IDirtyModel[T comparable] interface {
-	SetParent(idx T, dirtyParentFunc DirtyParentFunc[T])
+type IDirtyModel interface {
+	SetParent(idx any, dirtyParentFunc DirtyParentFunc)
 	IsDirty() bool
-	IsDirtyAll() bool
-	UpdateDirty(n T)
-	UpdateDirtyAll()
 	CleanDirty()
 }
 
-func CheckCallDirty[T comparable](v any, idx T, dirtyParentFunc DirtyParentFunc[T]) {
-	if dirty, ok := v.(IDirtyModel[T]); ok {
+func CheckCallDirty(v any, idx any, dirtyParentFunc DirtyParentFunc) {
+	if dirty, ok := v.(IDirtyModel); ok {
 		dirty.SetParent(idx, dirtyParentFunc)
 	}
 }

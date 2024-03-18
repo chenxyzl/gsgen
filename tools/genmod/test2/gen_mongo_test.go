@@ -34,7 +34,7 @@ func TestMongoLoadSave(t *testing.T) {
 	b.GetC().Append(v)
 	//b.GetC().Set(0, v)
 
-	b.SetD(mdata.NewMMap[string, *model.TestA, uint64]())
+	b.SetD(mdata.NewMMap[string, *model.TestA]())
 	b.GetD().Set("1", &model.TestA{})
 
 	b.CleanDirty()
