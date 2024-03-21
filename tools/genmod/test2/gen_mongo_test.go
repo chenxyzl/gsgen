@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gotest/model"
-	"gotest/model/mdata"
 	"gotest/tools/genmod/mongo_helper"
 	"log"
 	"math"
@@ -29,15 +28,15 @@ func TestMongoLoadSave(t *testing.T) {
 	b.SetM("333")
 	b.SetN(&a)
 
-	v := &model.TestA{}
-	b.SetC(mdata.NewList[*model.TestA]())
-	b.GetC().Append(v)
-	//b.GetC().Set(0, v)
+	//v := &model.TestA{}
+	//b.SetC(mdata.NewList[*model.TestA]())
+	//b.GetC().Append(v)
+	////b.GetC().Set(0, v)
+	//
+	//b.SetD(mdata.NewMMap[string, *model.TestA]())
+	//b.GetD().Set("1", &model.TestA{})
 
-	b.SetD(mdata.NewMMap[string, *model.TestA]())
-	b.GetD().Set("1", &model.TestA{})
-
-	b.CleanDirty()
+	//b.CleanDirty()
 
 	c := model.TestC{}
 	c.SetId(789)
@@ -53,7 +52,7 @@ func TestMongoLoadSave(t *testing.T) {
 		panic(e)
 	}
 
-	if false {
+	if true {
 		mongo_helper.Connect("mongodb+srv://ichenzhl:Qwert321@cluster0.feqwf3z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 		defer mongo_helper.Close()
 		col := mongo_helper.GetCol("test", "model")
@@ -69,5 +68,27 @@ func TestMongoLoadSave(t *testing.T) {
 			log.Fatal(err)
 		}
 		fmt.Println(zz)
+	}
+}
+
+func TestMongo1(t *testing.T) {
+	a := model.TestA{}
+	a.SetId(123)
+	a.SetA(111)
+	a.SetB(222)
+
+	b := model.TestB{}
+	b.SetId(456)
+	b.SetM("333")
+	b.SetN(&a)
+
+	s, e := bson.Marshal(&b)
+	if e != nil {
+		panic(e)
+	}
+	z := model.TestB{}
+	e = bson.Unmarshal(s, &z)
+	if e != nil {
+		panic(e)
 	}
 }

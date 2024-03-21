@@ -14,13 +14,17 @@ func (c *TestA) MarshalBSON() ([]byte, error) {
 }
 
 func (c *TestA) UnmarshalBSON(data []byte) error {
-	var doc bson.M
+	doc := struct {
+		Id uint64 `bson:"_id"`
+		A  int64  `bson:"a"`
+		B  int32  `bson:"b"` //
+	}{}
 	if err := bson.Unmarshal(data, &doc); err != nil {
 		return err
 	}
-	c.SetId(uint64(doc["_id"].(int64)))
-	c.SetA(doc["a"].(int64))
-	c.SetB(doc["b"].(int32))
+	c.SetId(doc.Id)
+	c.SetA(doc.A)
+	c.SetB(doc.B)
 	return nil
 }
 func (m *TestB) MarshalBSON() ([]byte, error) {
@@ -32,25 +36,17 @@ func (m *TestB) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(doc)
 }
 func (m *TestB) UnmarshalBSON(data []byte) error {
-	var doc bson.M
+	doc := struct {
+		Id uint64 `bson:"_id"`
+		M  string `bson:"m"`
+		N  *TestA `bson:"n"` //
+	}{}
 	if err := bson.Unmarshal(data, &doc); err != nil {
 		return err
 	}
-	m.SetId(uint64(doc["_id"].(int64)))
-	m.SetM(doc["m"].(string))
-	//The problem is here
-	//repeated Marshal and Unmarshal
-	//convert primitive.M to struct TestA
-	//todo 需要更优雅的方法
-	if dat, err := bson.Marshal(doc["n"]); err != nil {
-		return err
-	} else {
-		var n TestA
-		if err := bson.Unmarshal(dat, &n); err != nil {
-			return err
-		}
-		m.SetN(&n)
-	}
+	m.SetId(doc.Id)
+	m.SetM(doc.M)
+	m.SetN(doc.N)
 	return nil
 }
 func (m *TestC) MarshalBSON() ([]byte, error) {
@@ -62,24 +58,16 @@ func (m *TestC) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(doc)
 }
 func (m *TestC) UnmarshalBSON(data []byte) error {
-	var doc bson.M
+	doc := struct {
+		Id uint64 `bson:"_id"`
+		X  string `bson:"x"`
+		Y  *TestB `bson:"y"` //
+	}{}
 	if err := bson.Unmarshal(data, &doc); err != nil {
 		return err
 	}
-	m.SetId(uint64(doc["_id"].(int64)))
-	m.SetX(doc["x"].(string))
-	//The problem is here
-	//repeated Marshal and Unmarshal
-	//convert primitive.M to struct TestA
-	//todo 需要更优雅的方法
-	if dat, err := bson.Marshal(doc["y"]); err != nil {
-		return err
-	} else {
-		var y TestB
-		if err := bson.Unmarshal(dat, &y); err != nil {
-			return err
-		}
-		m.SetY(&y)
-	}
+	m.SetId(doc.Id)
+	m.SetX(doc.X)
+	m.SetY(doc.Y)
 	return nil
 }

@@ -10,11 +10,11 @@ type TestA struct {
 }
 
 type TestB struct {
-	id               uint64 `bson:"_id"`
-	m                string `bson:"m"`
-	n                *TestA `bson:"n"` // 内嵌结构体类型 A
-	c                *mdata.MList[*TestA]
-	d                *mdata.MMap[string, *TestA]
+	id uint64 `bson:"_id"`
+	m  string `bson:"m"`
+	n  *TestA `bson:"n"` // 内嵌结构体类型 A
+	//c                *mdata.MList[*TestA]
+	//d                *mdata.MMap[string, *TestA]
 	mdata.DirtyModel `bson:"-"`
 }
 type TestC struct {
