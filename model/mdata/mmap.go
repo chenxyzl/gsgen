@@ -1,5 +1,7 @@
 package mdata
 
+import "go.mongodb.org/mongo-driver/bson"
+
 // MMap ----------------------------------MMap-------------------------------------
 // MMap map的包装
 // @K key的类型
@@ -15,8 +17,15 @@ type MMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 
 }
 
 func NewMMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64 | string, V any]() *MMap[K, V] {
+	ret := &MMap[K, V]{}
+	ret.init()
+	return ret
+}
+func (this *MMap[K, V]) init() {
+	this.data = make(map[K]V)
+	this.dirty = make(map[K]bool)
 	var k K
-	return &MMap[K, V]{data: make(map[K]V), dirty: make(map[K]bool), isNumKey: isNum(k)}
+	this.isNumKey = isNum(k)
 }
 
 // Len 长度
@@ -158,4 +167,21 @@ func (this *MMap[K, V]) updateDirtyAll() {
 	if this.dirtyParent != nil {
 		this.dirtyParent.Invoke(this.inParentDirtyIdx)
 	}
+}
+
+func (this *MMap[K, V]) MarshalBSON() ([]byte, error) {
+	r, r1, r2 := bson.MarshalValue(this.data)
+	_ = r
+	return r1, r2
+}
+func (this *MMap[K, V]) UnmarshalBSON(data []byte) error {
+	var m map[K]V
+	if err := bson.UnmarshalValue(bson.TypeEmbeddedDocument, data, &m); err != nil {
+		return err
+	}
+	this.init()
+	for k, v := range m {
+		this.Set(k, v)
+	}
+	return nil
 }

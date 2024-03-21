@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gotest/model"
+	"gotest/model/mdata"
 	"gotest/tools/genmod/mongo_helper"
 	"log"
 	"math"
@@ -28,15 +29,31 @@ func TestMongoLoadSave(t *testing.T) {
 	b.SetM("333")
 	b.SetN(&a)
 
-	//v := &model.TestA{}
-	//b.SetC(mdata.NewList[*model.TestA]())
-	//b.GetC().Append(v)
-	////b.GetC().Set(0, v)
-	//
-	//b.SetD(mdata.NewMMap[string, *model.TestA]())
-	//b.GetD().Set("1", &model.TestA{})
+	b.SetC(mdata.NewList[*model.TestA]())
+	v1 := &model.TestA{}
+	v1.SetId(1)
+	v1.SetA(2)
+	v1.SetB(3)
+	b.GetC().Append(v1)
+	v2 := &model.TestA{}
+	v2.SetId(11)
+	v2.SetA(12)
+	v2.SetB(13)
+	b.GetC().Append(v2)
+	//b.GetC().Set(0, v)
 
-	//b.CleanDirty()
+	b.SetD(mdata.NewMMap[string, *model.TestA]())
+	v11 := &model.TestA{}
+	v11.SetId(100)
+	v11.SetA(101)
+	v11.SetB(102)
+	b.GetD().Set("100", v11)
+	v22 := &model.TestA{}
+	v22.SetId(110)
+	v22.SetA(111)
+	v22.SetB(112)
+	b.GetD().Set("110", v22)
+	b.CleanDirty()
 
 	c := model.TestC{}
 	c.SetId(789)

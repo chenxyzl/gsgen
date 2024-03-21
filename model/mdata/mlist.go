@@ -2,6 +2,7 @@ package mdata
 
 import (
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // MList ----------------------MList-----------------------
@@ -15,7 +16,13 @@ type MList[T any] struct {
 }
 
 func NewList[T any]() *MList[T] {
-	return &MList[T]{data: make([]T, 0), dirty: make(map[uint64]bool)}
+	ret := &MList[T]{}
+	ret.init()
+	return ret
+}
+func (this *MList[T]) init() {
+	this.data = make([]T, 0)
+	this.dirty = make(map[uint64]bool)
 }
 
 // Len 长度
@@ -150,4 +157,21 @@ func (this *MList[T]) updateDirtyAll() {
 	if this.dirtyParent != nil {
 		this.dirtyParent.Invoke(this.inParentDirtyIdx)
 	}
+}
+
+func (this *MList[T]) MarshalBSON() ([]byte, error) {
+	r, r1, r2 := bson.MarshalValue(this.data)
+	_ = r
+	return r1, r2
+}
+func (this *MList[T]) UnmarshalBSON(data []byte) error {
+	var list []T
+	if err := bson.UnmarshalValue(bson.TypeArray, data, &list); err != nil {
+		return err
+	}
+	this.init()
+	for _, v := range list {
+		this.Append(v)
+	}
+	return nil
 }
