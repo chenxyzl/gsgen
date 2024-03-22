@@ -1,8 +1,11 @@
 ## gen getter setter,mongo incremental update
 ### wanted
 - 生成getter 可选生成setter(为了给后面table和config做readonly)
-- 生成mongo的marshal/unmarshal
-- 生成setter的脏标记,实现mongo的增量更新
+    - 已能生成getter和setter
+    - 已支持基本类型，嵌套struct，支持Map和List（全类型）
+- 生成mongo的marshal/unmarshal/增量更新
+    - [X]已手动实现marshal/unmarshal
+    - [X]已支持基本类型，嵌套struct，支持Map和List（全类型）
 
 ### todo
 - [X] MMap的k不为uint64时候,更新脏标记的编译错误
