@@ -112,6 +112,9 @@ func (this *MList[T]) Range(f func(idx int, v T) bool) {
 }
 
 func (this *MList[T]) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
+	if this == nil {
+		return
+	}
 	if this.dirtyParent != nil {
 		panic("model被重复设置了父节点,请先从老节点移除")
 	}

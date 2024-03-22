@@ -22,6 +22,9 @@ type DirtyModel struct {
 }
 
 func (this *DirtyModel) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
+	if this == nil {
+		return
+	}
 	if this.dirtyParent != nil {
 		panic("model被重复设置了父节点,请先从老节点移除")
 	}

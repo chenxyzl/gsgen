@@ -92,6 +92,9 @@ func (this *MMap[K, V]) Range(f func(K, V) bool) {
 }
 
 func (this *MMap[K, V]) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
+	if this == nil {
+		return
+	}
 	if this.dirtyParent != nil {
 		panic("model被重复设置了父节点,请先从老节点移除")
 	}
