@@ -64,7 +64,7 @@ func (this *MList[T]) Set(idx uint64, v T) {
 		panic(fmt.Sprintf("MList set idx out of range, len:%d|idx:%d", l, idx))
 	}
 	//
-	CheckCallDirty(v, idx, this.updateDirty)
+	checkSetParent(v, idx, this.updateDirty)
 	this.data[idx] = v
 	this.updateDirty(idx)
 }
@@ -77,7 +77,7 @@ func (this *MList[T]) Append(vs ...T) {
 	for _, v := range vs {
 		idx := uint64(this.Len())
 		//
-		CheckCallDirty(v, idx, this.updateDirty)
+		checkSetParent(v, idx, this.updateDirty)
 		this.data = append(this.data, v)
 		this.updateDirty(idx)
 	}

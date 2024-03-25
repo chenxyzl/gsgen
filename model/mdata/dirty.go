@@ -55,3 +55,9 @@ func (this *DirtyModel) UpdateDirty(tn any) {
 		this.dirtyParent.Invoke(this.inParentDirtyIdx)
 	}
 }
+
+func (this *DirtyModel) CheckSetBefore() {
+	if this.dirtyParent != nil {
+		panic("model被重复设置了父节点,请先从老节点移除")
+	}
+}

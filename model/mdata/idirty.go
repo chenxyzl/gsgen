@@ -14,7 +14,7 @@ type IDirtyModel interface {
 	CleanDirty()
 }
 
-func CheckCallDirty(v any, idx any, dirtyParentFunc DirtyParentFunc) {
+func checkSetParent(v any, idx any, dirtyParentFunc DirtyParentFunc) {
 	if dirty, ok := v.(IDirtyModel); ok {
 		dirty.SetParent(idx, dirtyParentFunc)
 	}

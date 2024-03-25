@@ -10,7 +10,7 @@
 ### todo
 - [X] MMap的k不为uint64时候,更新脏标记的编译错误
 - [ ] AST生成实现Model增加Clone方法的实现(因为同一个Model只能有1个父,方便多个点个用同一个值的情况)
-- [ ] AST生成实现每个set都需要判断是否 value已经有父节点了
+- [X] AST生成实现每个set都需要判断是否 value已经有父节点了
 - [ ] AST生成实现mongo的bson.tag检查
 - [ ] AST生成实现mongo序列化反序列化的代码生成（已手动编辑验证）
     - [X] 优化反序列化的filed为嵌套的model时候多了一次序列化反序列化的问题

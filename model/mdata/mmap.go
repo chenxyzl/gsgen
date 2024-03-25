@@ -59,7 +59,7 @@ func (this *MMap[K, V]) Set(k K, v V) {
 		panic("map is nil")
 	}
 	//
-	CheckCallDirty(v, k, this.updateDirty)
+	checkSetParent(v, k, this.updateDirty)
 	this.data[k] = v
 	this.updateDirty(k)
 }
@@ -171,7 +171,6 @@ func (this *MMap[K, V]) updateDirtyAll() {
 		this.dirtyParent.Invoke(this.inParentDirtyIdx)
 	}
 }
-
 func (this *MMap[K, V]) MarshalBSON() ([]byte, error) {
 	r, r1, r2 := bson.MarshalValue(this.data)
 	_ = r

@@ -142,32 +142,6 @@ func generateGettersAndSetters(file *ast.File, structTypeExpr *ast.Ident, struct
 		var setterBody []ast.Stmt
 		if !isBaseType {
 			setterBody = []ast.Stmt{
-				&ast.AssignStmt{ //赋值
-					Lhs: []ast.Expr{
-						&ast.SelectorExpr{
-							X:   ast.NewIdent("s"),
-							Sel: ast.NewIdent(fieldName),
-						},
-					},
-					Tok: token.ASSIGN,
-					Rhs: []ast.Expr{
-						ast.NewIdent("v"),
-					},
-				},
-				&ast.ExprStmt{ //更新当前的dirty
-					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("s"),
-							Sel: ast.NewIdent("UpdateDirty"),
-						},
-						Args: []ast.Expr{
-							&ast.BasicLit{
-								Kind:  token.INT,
-								Value: strconv.Itoa(idx),
-							},
-						},
-					},
-				},
 				&ast.IfStmt{ //field设置自己的dirtyIdx
 					If:   0,
 					Init: nil,
@@ -196,6 +170,32 @@ func generateGettersAndSetters(file *ast.File, structTypeExpr *ast.Ident, struct
 						},
 					},
 					Else: nil,
+				},
+				&ast.AssignStmt{ //赋值
+					Lhs: []ast.Expr{
+						&ast.SelectorExpr{
+							X:   ast.NewIdent("s"),
+							Sel: ast.NewIdent(fieldName),
+						},
+					},
+					Tok: token.ASSIGN,
+					Rhs: []ast.Expr{
+						ast.NewIdent("v"),
+					},
+				},
+				&ast.ExprStmt{ //更新当前的dirty
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("s"),
+							Sel: ast.NewIdent("UpdateDirty"),
+						},
+						Args: []ast.Expr{
+							&ast.BasicLit{
+								Kind:  token.INT,
+								Value: strconv.Itoa(idx),
+							},
+						},
+					},
 				},
 			}
 			//生成clean-field
