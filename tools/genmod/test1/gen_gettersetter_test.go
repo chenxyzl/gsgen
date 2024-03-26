@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -42,14 +43,24 @@ func TestGetterSetter(t *testing.T) {
 	addImport(genFile, []string{})
 
 	// 找到需要生成 getter 和 setter 的 struct 类型
+	withMongo := true
 	ast.Inspect(srcFile, func(n ast.Node) bool {
-		if spec, ok := n.(*ast.TypeSpec); ok {
-			structType, ok := spec.Type.(*ast.StructType)
-			if ok {
+		if genDecl, genDeclOk := n.(*ast.GenDecl); genDeclOk { //头文件
+			if genDecl.Tok == token.IMPORT {
+				genFile.Decls = append(genFile.Decls, genDecl)
+			}
+		} else if spec, specOk := n.(*ast.TypeSpec); specOk { //类型定义
+			structType, structTypeOk := spec.Type.(*ast.StructType)
+			if structTypeOk {
 				//格式检查
-				fields := checkModelStruct(spec.Name, structType)
+				fields := checkModelStruct(spec.Name, structType, withMongo)
 				// 生成 getter 和 setter 方法
 				generateGettersAndSetters(genFile, spec.Name, structType, fields)
+
+				// 生成 mongo
+				if withMongo {
+					//generateMongo(genFile, spec.Name, structType, fields)
+				}
 			}
 		}
 		return true
@@ -79,7 +90,7 @@ func TestGetterSetter(t *testing.T) {
 	//}
 }
 
-func checkModelStruct(structNameIdent *ast.Ident, structType *ast.StructType) (out []*ast.Field) {
+func checkModelStruct(structNameIdent *ast.Ident, structType *ast.StructType, withMongo bool) (out []*ast.Field) {
 	contain := false
 	for _, field := range structType.Fields.List {
 		isDirtyModel, needGenField := isLegalField(structNameIdent, field)
@@ -88,12 +99,37 @@ func checkModelStruct(structNameIdent *ast.Ident, structType *ast.StructType) (o
 		}
 		if needGenField {
 			out = append(out, field)
+			if withMongo {
+				_, found := getFieldTag(structNameIdent, field, "bson:")
+				if !found {
+					panic(fmt.Sprintf("类型:%v, 字段:%v, 需要生成mongo, 但是缺少bson.tag.1, 如需忽略请设置为:%v", structNameIdent, field.Names[0].Name, "`bson:\"-\"`"))
+				}
+			}
 		}
 	}
 	if !contain {
 		panic(fmt.Sprintf("类型:%v, 必须包含DirtyModel", structNameIdent))
 	}
 	return out
+}
+
+func getFieldTag(structNameIdent *ast.Ident, field *ast.Field, tagName string) (string, bool) {
+	if field.Tag == nil || field.Tag.Value == "" {
+		return "", false
+	}
+	tags := strings.Split(strings.Trim(field.Tag.Value, "`"), " ")
+	fieldName := field.Names[0].Name
+	bsonTag := ""
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, "bson:") {
+			if bsonTag != "" {
+				panic(fmt.Sprintf("类型:%v, 字段:%v, tag重复, tag:%v", structNameIdent, fieldName, bsonTag))
+			} else {
+				bsonTag = strings.TrimPrefix(tag, "bson:")
+			}
+		}
+	}
+	return bsonTag, bsonTag != "" && bsonTag != "\"\""
 }
 
 func generateGettersAndSetters(file *ast.File, structTypeExpr *ast.Ident, structType *ast.StructType, fields []*ast.Field) *ast.File {
@@ -325,6 +361,217 @@ func addImport(genFile *ast.File, imports []string) {
 			Specs: importSpecs,
 		})
 	}
+}
+
+func generateMongo(file *ast.File, structTypeExpr *ast.Ident, structType *ast.StructType, fields []*ast.Field) *ast.File {
+	var cleanStructBody []ast.Stmt
+	for idx, field := range fields {
+		//经过检测，要么是基本类型的值类型，要么是struct的指针类型，且名字一定为1
+		fieldName := field.Names[0].Name
+		isBaseType := isBasicType1(field.Type)
+
+		//getter
+		file.Decls = append(file.Decls, &ast.FuncDecl{
+			Name: ast.NewIdent("Get" + cases.Title(language.Und).String(fieldName)),
+			Type: &ast.FuncType{
+				Params: &ast.FieldList{},
+				Results: &ast.FieldList{
+					List: []*ast.Field{
+						{
+							Type: field.Type,
+						},
+					},
+				},
+			},
+			Recv: &ast.FieldList{
+				List: []*ast.Field{
+					{
+						Names: []*ast.Ident{ast.NewIdent("s")},
+						Type:  &ast.StarExpr{X: structTypeExpr},
+					},
+				},
+			},
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.ReturnStmt{
+						Results: []ast.Expr{
+							&ast.SelectorExpr{
+								X:   ast.NewIdent("s"),
+								Sel: ast.NewIdent(fieldName),
+							},
+						},
+					},
+				},
+			},
+		})
+
+		//setter-body
+		var setterBody []ast.Stmt
+		if !isBaseType {
+			setterBody = []ast.Stmt{
+				&ast.IfStmt{ //field设置自己的dirtyIdx
+					If:   0,
+					Init: nil,
+					Cond: &ast.BinaryExpr{
+						X:  &ast.Ident{Name: "v"},
+						Op: token.NEQ,
+						Y:  &ast.Ident{Name: "nil"},
+					},
+					Body: &ast.BlockStmt{
+						List: []ast.Stmt{
+							&ast.ExprStmt{
+								X: &ast.CallExpr{
+									Fun: ast.NewIdent("v.SetParent"),
+									Args: []ast.Expr{
+										&ast.BasicLit{
+											Kind:  token.INT,
+											Value: strconv.Itoa(idx),
+										},
+										&ast.BasicLit{
+											Kind:  token.FUNC,
+											Value: "s.UpdateDirty",
+										},
+									},
+								},
+							},
+						},
+					},
+					Else: nil,
+				},
+				&ast.AssignStmt{ //赋值
+					Lhs: []ast.Expr{
+						&ast.SelectorExpr{
+							X:   ast.NewIdent("s"),
+							Sel: ast.NewIdent(fieldName),
+						},
+					},
+					Tok: token.ASSIGN,
+					Rhs: []ast.Expr{
+						ast.NewIdent("v"),
+					},
+				},
+				&ast.ExprStmt{ //更新当前的dirty
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("s"),
+							Sel: ast.NewIdent("UpdateDirty"),
+						},
+						Args: []ast.Expr{
+							&ast.BasicLit{
+								Kind:  token.INT,
+								Value: strconv.Itoa(idx),
+							},
+						},
+					},
+				},
+			}
+			//生成clean-field
+			cleanStructBody = append(cleanStructBody, &ast.IfStmt{ //field设置自己的dirtyIdx
+				If:   0,
+				Init: nil,
+				Cond: &ast.BinaryExpr{
+					X:  &ast.Ident{Name: "s." + fieldName},
+					Op: token.NEQ,
+					Y:  &ast.Ident{Name: "nil"},
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ExprStmt{
+							X: &ast.CallExpr{
+								Fun: &ast.SelectorExpr{
+									X:   ast.NewIdent("s." + fieldName),
+									Sel: ast.NewIdent("CleanDirty"),
+								},
+							},
+						},
+					},
+				},
+				Else: nil,
+			})
+		} else {
+			setterBody = []ast.Stmt{
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{
+						&ast.SelectorExpr{
+							X:   ast.NewIdent("s"),
+							Sel: ast.NewIdent(fieldName),
+						},
+					},
+					Tok: token.ASSIGN,
+					Rhs: []ast.Expr{
+						ast.NewIdent("v"),
+					},
+				},
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("s"),
+							Sel: ast.NewIdent("UpdateDirty"),
+						},
+						Args: []ast.Expr{
+							&ast.BasicLit{
+								Kind:  token.INT,
+								Value: strconv.Itoa(idx),
+							},
+						},
+					},
+				},
+			}
+		}
+		//setter
+		file.Decls = append(file.Decls, &ast.FuncDecl{
+			Name: ast.NewIdent("Set" + cases.Title(language.Und).String(fieldName)),
+			Type: &ast.FuncType{
+				Params: &ast.FieldList{
+					List: []*ast.Field{
+						{
+							Names: []*ast.Ident{ast.NewIdent("v")},
+							Type:  field.Type,
+						},
+					},
+				},
+			},
+			Recv: &ast.FieldList{
+				List: []*ast.Field{
+					{
+						Names: []*ast.Ident{ast.NewIdent("s")},
+						Type:  &ast.StarExpr{X: structTypeExpr},
+					},
+				},
+			},
+			Body: &ast.BlockStmt{
+				List: setterBody,
+			},
+		})
+	}
+	//生成clean方法
+	file.Decls = append(file.Decls, &ast.FuncDecl{
+		Name: ast.NewIdent("CleanDirty"),
+		Type: &ast.FuncType{},
+		Recv: &ast.FieldList{
+			List: []*ast.Field{
+				{
+					Names: []*ast.Ident{ast.NewIdent("s")},
+					Type:  &ast.StarExpr{X: structTypeExpr},
+				},
+			},
+		},
+		Body: &ast.BlockStmt{
+			List: append([]ast.Stmt{ //先clean自己
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("s.DirtyModel"),
+							Sel: ast.NewIdent("CleanDirty"),
+						},
+					},
+				},
+			},
+				cleanStructBody..., //再clean-field
+			),
+		},
+	})
+	return file
 }
 
 func isBasicType(typeStr string) bool {
