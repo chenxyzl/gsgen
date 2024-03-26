@@ -70,7 +70,7 @@ func TestMongoLoadSave(t *testing.T) {
 	}
 
 	if false {
-		mongo_helper.Connect("mongodb+srv://ichenzhl:Qwert321@cluster0.feqwf3z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+		mongo_helper.Connect("") //todo 换成自己的mongo地址测试
 		defer mongo_helper.Close()
 		col := mongo_helper.GetCol("test", "model")
 
