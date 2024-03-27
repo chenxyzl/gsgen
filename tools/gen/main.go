@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"gotest/tools/genmod/internal"
+	"gotest/tools/gen/internal"
 	"os"
 	"path/filepath"
 )

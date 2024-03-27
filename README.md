@@ -21,7 +21,7 @@
     - [ ] 增加指令-m,mongo用于生成mongo对应的增量更新、序列化、反序列化（依赖-s）
 
 ### how to run
-- 编译: go build -o ./gen ../tools/genmod/main.go
+- 编译: go build -o ./gen ../tools/gen/main.go
 - 执行: ./gen -d="../model" -f=".model.go,.mod.go" -s -m
     - -d表示目录
     - -f表示文件后缀

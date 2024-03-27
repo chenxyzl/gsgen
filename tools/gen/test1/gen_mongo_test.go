@@ -7,7 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gotest/model"
 	"gotest/model/mdata"
-	"gotest/tools/genmod/test1/mongo_helper"
+	"gotest/tools/gen/test1/mongo_helper"
 	"log"
 	"math"
 	"testing"
