@@ -24,7 +24,7 @@ func TestGetterSetter(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	testFile := filepath.Clean(filepath.Join(currentDir, "../../../", "model/example.go"))
+	testFile := filepath.Clean(filepath.Join(currentDir, "../../../", "model/example.model.go"))
 	testOutFile := filepath.Clean(filepath.Join(currentDir, "../../../", "model/example.gen.go"))
 
 	// 解析源代码

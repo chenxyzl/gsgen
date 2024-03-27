@@ -16,6 +16,6 @@
     - [X] 优化反序列化的filed为嵌套的model时候多了一次序列化反序列化的问题
 - [ ] AST生成实现mongo增量更新的代码生成（已手动验证）
 - [ ] 通过命令行来按需生成getter/setter/dirty/mongo
-    - [ ] 增加指令-g,getter用作table和config的只读,一般默认导出
-    - [ ] 增加指令-s,setter用于区分权限
+    - [X] 增加指令getter用作table和config的只读,默认导出不可配置
+    - [X] 增加指令-s,setter用于区分权限
     - [ ] 增加指令-m,mongo用于生成mongo对应的增量更新、序列化、反序列化（依赖-s）
