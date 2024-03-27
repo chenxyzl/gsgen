@@ -1,13 +1,13 @@
-package test1
+package test
 
 import (
 	"context"
 	"fmt"
+	"gen_tools/model"
+	"gen_tools/model/mdata"
+	"gen_tools/test/mongo_helper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"gotest/model"
-	"gotest/model/mdata"
-	"gotest/tools/gen/test1/mongo_helper"
 	"log"
 	"math"
 	"testing"

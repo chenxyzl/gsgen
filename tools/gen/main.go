@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"gen/internal"
 	"github.com/spf13/cobra"
-	"gotest/tools/gen/internal"
 	"os"
 	"path/filepath"
 )

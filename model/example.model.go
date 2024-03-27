@@ -1,6 +1,6 @@
 package model
 
-import "gotest/model/mdata"
+import "gen_tools/model/mdata"
 
 type TestA struct {
 	id               uint64 `bson:"_id"`

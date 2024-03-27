@@ -1,8 +1,8 @@
 package model
 
 import (
+	"gen_tools/model/mdata"
 	"go.mongodb.org/mongo-driver/bson"
-	"gotest/model/mdata"
 )
 
 func (c *TestA) MarshalBSON() ([]byte, error) {
