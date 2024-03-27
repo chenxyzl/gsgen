@@ -19,3 +19,12 @@
     - [X] 增加指令getter用作table和config的只读,默认导出不可配置
     - [X] 增加指令-s,setter用于区分权限
     - [ ] 增加指令-m,mongo用于生成mongo对应的增量更新、序列化、反序列化（依赖-s）
+
+### how to run
+- 编译: go build -o ./gen ../tools/genmod/main.go
+- 执行: ./gen -d="../model" -f=".model.go,.mod.go" -s -m
+    - -d表示目录
+    - -f表示文件后缀
+    - -s表示生成setter(默认只生成getter)
+    - -m表示生成mongo(默认只生成getter)
+    - 支持的命令参考请执行 ./gen -h

@@ -279,13 +279,18 @@ func printOutFile(fileSet *token.FileSet, astFile *ast.File, outPutFile string) 
 	buffer := bytes.NewBuffer(nil)
 	addHeader(buffer)
 	//格式化 输出到buffer
-	err := format.Node(buffer, fileSet, astFile)
-	if err != nil {
+	if err := format.Node(buffer, fileSet, astFile); err != nil {
 		panic(fmt.Sprintf("Failed to format source code: %v", err))
 	}
-	err = os.WriteFile(outPutFile, buffer.Bytes(), 0444)
+	//打开
+	f, err := os.OpenFile(outPutFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to print modified source code: %v", err))
+		panic(fmt.Sprintf("Failed to open file:%v|err:%v", outPutFile, err))
+	}
+	defer f.Close()
+	//写入内容
+	if _, err := f.Write(buffer.Bytes()); err != nil {
+		panic(fmt.Sprintf("Failed to write file:%v|err:%v", outPutFile, err))
 	}
 }
 

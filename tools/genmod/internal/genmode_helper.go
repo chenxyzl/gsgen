@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const bsonIgnoreTag = "bson:\"-\""
+const bsonIgnoreTag = "`bson:\"-\"`"
 
 func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, withMongo bool) (out []*ast.Field) {
 	contain := false
@@ -25,7 +25,7 @@ func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, wi
 			//生成mongo时候 tag必须设置为bsonIgnoreTag
 			if withMongo {
 				if field.Tag.Value != bsonIgnoreTag {
-					panic(fmt.Sprintf("类型:%v, 字段:%v, 只能是%v", structNameIdent, "DirtyModel", bsonIgnoreTag))
+					panic(fmt.Sprintf("类型:%v, 字段:%v, 只能是%v 当前是:%v", structNameIdent, "DirtyModel", bsonIgnoreTag, field.Tag.Value))
 				}
 			}
 		}

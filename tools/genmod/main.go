@@ -10,8 +10,8 @@ import (
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:   "gg",
-		Short: "gg is a function generate, getter/setter/mongo",
+		Use:   "gen",
+		Short: "gen is a function generate, getter/setter/mongo",
 		Run: func(cmd *cobra.Command, args []string) {
 			//parse dir
 			dir, err := cmd.Flags().GetString("dir")
@@ -43,9 +43,9 @@ func main() {
 			}
 
 			//
-			fmt.Printf("dir: %v\nfile suffix: %v\ngen getter: true[must]\ngen setter: %v\ngen mongo:%v \n", fileSuffix, fullDir, genSetter, genMongo)
+			fmt.Printf("dir: %v\nfile suffix: %v\ngen getter: true[must]\ngen setter: %v\ngen mongo:%v \n", fullDir, fileSuffix, genSetter, genMongo)
 			//
-			internal.Gen(dir, fileSuffix, genSetter, genMongo)
+			internal.Gen(fullDir, fileSuffix, genSetter, genMongo)
 		},
 	}
 	//增加默认命令
