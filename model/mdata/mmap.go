@@ -1,6 +1,10 @@
 package mdata
 
-import "go.mongodb.org/mongo-driver/bson"
+import (
+	"encoding/json"
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+)
 
 // MMap ----------------------------------MMap-------------------------------------
 // MMap map的包装
@@ -152,11 +156,38 @@ func (this *MMap[K, V]) updateDirtyAll() {
 		this.dirtyParent.Invoke(this.inParentDirtyIdx)
 	}
 }
+
+// String toString
+func (this *MMap[K, V]) String() string {
+	return fmt.Sprintf("%v", this.data)
+}
+
+// MarshalJSON json序列化
+func (this *MMap[K, V]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.data)
+}
+
+// UnmarshalJSON json反序列化
+func (this *MMap[K, V]) UnmarshalJSON(data []byte) error {
+	var m map[K]V
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+	this.init()
+	for k, v := range m {
+		this.Set(k, v)
+	}
+	return nil
+}
+
+// MarshalBSON bson序列化
 func (this *MMap[K, V]) MarshalBSON() ([]byte, error) {
 	r, r1, r2 := bson.MarshalValue(this.data)
 	_ = r
 	return r1, r2
 }
+
+// UnmarshalBSON bson反序列化
 func (this *MMap[K, V]) UnmarshalBSON(data []byte) error {
 	var m map[K]V
 	if err := bson.UnmarshalValue(bson.TypeEmbeddedDocument, data, &m); err != nil {

@@ -202,3 +202,83 @@ func TestGenUnmarshalBSON(t *testing.T) {
 		panic(err)
 	}
 }
+
+func TestGenString(t *testing.T) {
+	fset := token.NewFileSet()
+	file := &ast.File{
+		Name: &ast.Ident{Name: "main"},
+		Decls: []ast.Decl{
+			&ast.FuncDecl{
+				Recv: &ast.FieldList{
+					List: []*ast.Field{
+						{
+							Names: []*ast.Ident{ast.NewIdent("s")},
+							Type:  &ast.StarExpr{X: ast.NewIdent("TestA")},
+						},
+					},
+				},
+				Name: ast.NewIdent("String"),
+				Type: &ast.FuncType{
+					Params: &ast.FieldList{
+						List: []*ast.Field{},
+					},
+					Results: &ast.FieldList{
+						List: []*ast.Field{
+							{Type: ast.NewIdent("string")},
+						},
+					},
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.AssignStmt{
+							Lhs: []ast.Expr{&ast.Ident{Name: "doc"}},
+							Tok: token.DEFINE,
+							Rhs: []ast.Expr{
+								&ast.CompositeLit{
+									Type: &ast.StructType{
+										Fields: &ast.FieldList{
+											List: []*ast.Field{
+												{
+													Names: []*ast.Ident{ast.NewIdent("Id")},
+													Type:  ast.NewIdent("uint64"),
+													Tag:   &ast.BasicLit{Kind: token.STRING, Value: "`bson:\"_id\"`"},
+												},
+												{
+													Names: []*ast.Ident{ast.NewIdent("A")},
+													Type:  ast.NewIdent("int64"),
+													Tag:   &ast.BasicLit{Kind: token.STRING, Value: "`bson:\"a\"`"},
+												},
+												{
+													Names: []*ast.Ident{ast.NewIdent("B")},
+													Type:  ast.NewIdent("int32"),
+													Tag:   &ast.BasicLit{Kind: token.STRING, Value: "`bson:\"b\"`"},
+												},
+											},
+										},
+									},
+									Elts: []ast.Expr{
+										&ast.SelectorExpr{X: ast.NewIdent("s"), Sel: ast.NewIdent("id")},
+										&ast.SelectorExpr{X: ast.NewIdent("s"), Sel: ast.NewIdent("a")},
+										&ast.SelectorExpr{X: ast.NewIdent("s"), Sel: ast.NewIdent("b")},
+									},
+								},
+							},
+						},
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								&ast.CallExpr{
+									Fun:  ast.NewIdent("fmt.Sprintf"),
+									Args: []ast.Expr{ast.NewIdent("\"%v\""), &ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("doc")}},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if err := printer.Fprint(os.Stdout, fset, file); err != nil {
+		panic(err)
+	}
+}

@@ -1,6 +1,7 @@
 package mdata
 
 import (
+	"encoding/json"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -162,11 +163,37 @@ func (this *MList[T]) updateDirtyAll() {
 	}
 }
 
+// String toString
+func (this *MList[T]) String() string {
+	return fmt.Sprintf("%v", this.data)
+}
+
+// MarshalJSON json序列化
+func (this *MList[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(this.data)
+}
+
+// UnmarshalJSON json反序列化
+func (this *MList[T]) UnmarshalJSON(data []byte) error {
+	var list []T
+	if err := json.Unmarshal(data, &list); err != nil {
+		return err
+	}
+	this.init()
+	for _, v := range list {
+		this.Append(v)
+	}
+	return nil
+}
+
+// MarshalBSON bson序列化
 func (this *MList[T]) MarshalBSON() ([]byte, error) {
 	r, r1, r2 := bson.MarshalValue(this.data)
 	_ = r
 	return r1, r2
 }
+
+// UnmarshalBSON bson反序列化
 func (this *MList[T]) UnmarshalBSON(data []byte) error {
 	var list []T
 	if err := bson.UnmarshalValue(bson.TypeArray, data, &list); err != nil {

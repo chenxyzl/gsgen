@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"gen_tools/model"
 	"gen_tools/model/mdata"
@@ -59,15 +60,28 @@ func TestMongoLoadSave(t *testing.T) {
 	c.SetId(789)
 	c.SetX("444")
 	c.SetY(&b)
-	s, e := bson.Marshal(&c)
+
+	m1, e := bson.Marshal(&c)
 	if e != nil {
 		panic(e)
 	}
-	z := model.TestC{}
-	e = bson.Unmarshal(s, &z)
+	m2 := model.TestC{}
+	e = bson.Unmarshal(m1, &m2)
 	if e != nil {
 		panic(e)
 	}
+	fmt.Println(&m2)
+
+	n1, e := json.Marshal(&c)
+	if e != nil {
+		panic(e)
+	}
+	n2 := model.TestC{}
+	e = json.Unmarshal(n1, &n2)
+	if e != nil {
+		panic(e)
+	}
+	fmt.Println(&n2)
 
 	if false {
 		mongo_helper.Connect("") //todo 换成自己的mongo地址测试
