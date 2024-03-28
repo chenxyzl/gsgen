@@ -70,7 +70,7 @@ func TestMongoLoadSave(t *testing.T) {
 	if e != nil {
 		panic(e)
 	}
-	fmt.Println(&m2)
+	fmt.Printf("m2:%v\n", &m2)
 
 	n1, e := json.Marshal(&c)
 	if e != nil {
@@ -81,7 +81,14 @@ func TestMongoLoadSave(t *testing.T) {
 	if e != nil {
 		panic(e)
 	}
-	fmt.Println(&n2)
+	fmt.Printf("n2:%v\n", &n2)
+	n3, e := n2.Clone()
+	if e != nil {
+		panic(e)
+	}
+	n3.GetY().GetC().Get(0).SetB(99999)
+	fmt.Printf("n2:%v\n", &n2)
+	fmt.Printf("n3:%v\n", n3)
 
 	if false {
 		mongo_helper.Connect("") //todo 换成自己的mongo地址测试

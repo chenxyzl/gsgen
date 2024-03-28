@@ -351,3 +351,107 @@ func genJsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.F
 	//all
 	file.Decls = append(file.Decls, f)
 }
+
+// genClone 生成Clone方法,Copy一个一样的返回
+func genClone(file *ast.File, structTypeExpr *ast.Ident) {
+	file.Decls = append(file.Decls, &ast.FuncDecl{
+		Recv: &ast.FieldList{
+			List: []*ast.Field{
+				{
+					Names: []*ast.Ident{ast.NewIdent("s")},
+					Type:  &ast.StarExpr{X: structTypeExpr},
+				},
+			},
+		},
+		Name: ast.NewIdent("Clone"),
+		Type: &ast.FuncType{
+			Params: &ast.FieldList{
+				List: []*ast.Field{},
+			},
+			Results: &ast.FieldList{
+				List: []*ast.Field{
+					{Type: &ast.StarExpr{X: structTypeExpr}},
+					{Type: ast.NewIdent("error")},
+				},
+			},
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{&ast.Ident{Name: "data"}, &ast.Ident{Name: "err"}},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun:  ast.NewIdent("json.Marshal"),
+							Args: []ast.Expr{ast.NewIdent("s")},
+						},
+					},
+				},
+				&ast.IfStmt{ //field设置自己的dirtyIdx
+					Cond: &ast.BinaryExpr{
+						X:  &ast.Ident{Name: "err"},
+						Op: token.NEQ,
+						Y:  &ast.Ident{Name: "nil"},
+					},
+					Body: &ast.BlockStmt{
+						List: []ast.Stmt{
+							&ast.ReturnStmt{
+								Results: []ast.Expr{
+									ast.NewIdent("nil"),
+									ast.NewIdent("err"),
+								},
+							},
+						},
+					},
+					Else: nil,
+				},
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{&ast.Ident{Name: "ret"}},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{
+						&ast.CompositeLit{
+							Type: structTypeExpr,
+						},
+					},
+				},
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{&ast.Ident{Name: "err"}},
+					Tok: token.ASSIGN,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun: ast.NewIdent("json.Unmarshal"),
+							Args: []ast.Expr{
+								ast.NewIdent("data"),
+								&ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("ret")},
+							},
+						},
+					},
+				},
+				&ast.IfStmt{ //field设置自己的dirtyIdx
+					Cond: &ast.BinaryExpr{
+						X:  &ast.Ident{Name: "err"},
+						Op: token.NEQ,
+						Y:  &ast.Ident{Name: "nil"},
+					},
+					Body: &ast.BlockStmt{
+						List: []ast.Stmt{
+							&ast.ReturnStmt{
+								Results: []ast.Expr{
+									ast.NewIdent("nil"),
+									ast.NewIdent("err"),
+								},
+							},
+						},
+					},
+					Else: nil,
+				},
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						&ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("ret")},
+						ast.NewIdent("nil"),
+					},
+				},
+			},
+		},
+	})
+}
