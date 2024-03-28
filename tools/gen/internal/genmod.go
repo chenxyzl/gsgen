@@ -7,8 +7,6 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -69,15 +67,19 @@ func genFile(sourceFile string, needSetter bool, needMongo bool) {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse source fild:%vcode: %v", sourceFile, err))
 	}
-	outFile := strings.TrimSuffix(sourceFile, ".go") + ".gen.go"
 
 	genAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
-	//mongoAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
+	mongoAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
 
 	ast.Inspect(srcFile, func(n ast.Node) bool {
 		if genDecl, genDeclOk := n.(*ast.GenDecl); genDeclOk { //头文件
 			if genDecl.Tok == token.IMPORT {
 				genAstFile.Decls = append(genAstFile.Decls, genDecl)
+				//mongo import
+				if needMongo {
+					mongoAstFile.Decls = append(mongoAstFile.Decls, genDecl)
+					addImport(mongoAstFile, "go.mongodb.org/mongo-driver/bson")
+				}
 			}
 		} else if spec, specOk := n.(*ast.TypeSpec); specOk { //类型定义
 			structType, structTypeOk := spec.Type.(*ast.StructType)
@@ -86,12 +88,17 @@ func genFile(sourceFile string, needSetter bool, needMongo bool) {
 			}
 			//检查需要生成的Field
 			fields := checkStructField(spec.Name, structType, needMongo)
-			//开始生成
+			//
 			generate(genAstFile, spec.Name, fields, needSetter)
+			//mongo 开始生成
+			if needMongo {
+				generateMongo(mongoAstFile, spec.Name, fields)
+			}
 		}
 		return true
 	})
-	printOutFile(fileSet, genAstFile, outFile)
+	printOutFile(fileSet, genAstFile, strings.TrimSuffix(sourceFile, ".go")+".gen.go")
+	printOutFile(fileSet, mongoAstFile, strings.TrimSuffix(sourceFile, ".go")+".mongo.go")
 }
 
 // generate 生成全部
@@ -111,7 +118,7 @@ func generateGetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 	fieldName := field.Names[0].Name
 	//getter
 	file.Decls = append(file.Decls, &ast.FuncDecl{
-		Name: ast.NewIdent("Get" + cases.Title(language.Und).String(fieldName)),
+		Name: ast.NewIdent(fieldNameToGetter(fieldName)),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{},
 			Results: &ast.FieldList{
@@ -216,7 +223,7 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 		})
 	//setter方法体
 	file.Decls = append(file.Decls, &ast.FuncDecl{
-		Name: ast.NewIdent("Set" + cases.Title(language.Und).String(fieldName)),
+		Name: ast.NewIdent(fieldNameToSetter(fieldName)),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
 				List: []*ast.Field{

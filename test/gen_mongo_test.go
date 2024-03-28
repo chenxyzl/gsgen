@@ -1,89 +1,204 @@
 package test
 
 import (
-	"context"
-	"fmt"
-	"gen_tools/model"
-	"gen_tools/model/mdata"
-	"gen_tools/test/mongo_helper"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
-	"math"
+	"go/ast"
+	"go/printer"
+	"go/token"
+	"os"
 	"testing"
 )
 
-func TestMongoLoadSave(t *testing.T) {
-	var x uint64 = math.MaxUint64 - 1
-	var y int64 = int64(x)
-	fmt.Println(x)
-	fmt.Println(y)
-
-	a := model.TestA{}
-	a.SetId(123)
-	a.SetA(111)
-	a.SetB(222)
-
-	b := model.TestB{}
-	b.SetId(456)
-	b.SetM("333")
-	b.SetN(&a)
-
-	b.SetC(mdata.NewList[*model.TestA]())
-	v1 := &model.TestA{}
-	v1.SetId(1)
-	v1.SetA(2)
-	v1.SetB(3)
-	b.GetC().Append(v1)
-	v2 := &model.TestA{}
-	v2.SetId(11)
-	v2.SetA(12)
-	v2.SetB(13)
-	b.GetC().Append(v2)
-	//b.GetC().Set(0, v)
-
-	b.SetD(mdata.NewMMap[string, *model.TestA]())
-	v11 := &model.TestA{}
-	v11.SetId(100)
-	v11.SetA(101)
-	v11.SetB(102)
-	b.GetD().Set("100", v11)
-	v22 := &model.TestA{}
-	v22.SetId(110)
-	v22.SetA(111)
-	v22.SetB(112)
-	b.GetD().Set("110", v22)
-	b.CleanDirty()
-
-	c := model.TestC{}
-	c.SetId(789)
-	c.SetX("444")
-	c.SetY(&b)
-	s, e := bson.Marshal(&c)
-	if e != nil {
-		panic(e)
+func TestGenMarshalBSON(t *testing.T) {
+	fset := token.NewFileSet()
+	file := &ast.File{
+		Name: &ast.Ident{Name: "main"},
+		Decls: []ast.Decl{
+			&ast.FuncDecl{
+				Recv: &ast.FieldList{
+					List: []*ast.Field{
+						{
+							Names: []*ast.Ident{ast.NewIdent("c")},
+							Type:  &ast.StarExpr{X: ast.NewIdent("TestA")},
+						},
+					},
+				},
+				Name: ast.NewIdent("MarshalBSON"),
+				Type: &ast.FuncType{
+					Params: &ast.FieldList{},
+					Results: &ast.FieldList{
+						List: []*ast.Field{
+							{Type: ast.NewIdent("[]byte")},
+							{Type: ast.NewIdent("error")},
+						},
+					},
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.DeclStmt{
+							Decl: &ast.GenDecl{
+								Tok: token.VAR,
+								Specs: []ast.Spec{
+									&ast.ValueSpec{
+										Names: []*ast.Ident{ast.NewIdent("doc")},
+										Type:  nil,
+										Values: []ast.Expr{
+											&ast.CompositeLit{
+												Type: ast.NewIdent("bson.M"),
+												Elts: []ast.Expr{
+													&ast.KeyValueExpr{
+														Key:   &ast.BasicLit{Kind: token.STRING, Value: `"_id"`},
+														Value: &ast.SelectorExpr{X: ast.NewIdent("c"), Sel: ast.NewIdent("id")},
+													},
+													&ast.KeyValueExpr{
+														Key:   &ast.BasicLit{Kind: token.STRING, Value: `"a"`},
+														Value: &ast.SelectorExpr{X: ast.NewIdent("c"), Sel: ast.NewIdent("a")},
+													},
+													&ast.KeyValueExpr{
+														Key:   &ast.BasicLit{Kind: token.STRING, Value: `"b"`},
+														Value: &ast.SelectorExpr{X: ast.NewIdent("c"), Sel: ast.NewIdent("b")},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								&ast.CallExpr{
+									Fun:  ast.NewIdent("bson.Marshal"),
+									Args: []ast.Expr{ast.NewIdent("doc")},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
-	z := model.TestC{}
-	e = bson.Unmarshal(s, &z)
-	if e != nil {
-		panic(e)
+
+	if err := printer.Fprint(os.Stdout, fset, file); err != nil {
+		panic(err)
+	}
+}
+
+func TestGenUnmarshalBSON(t *testing.T) {
+	fset := token.NewFileSet()
+	file := &ast.File{
+		Name: &ast.Ident{Name: "main"},
+		Decls: []ast.Decl{
+			&ast.FuncDecl{
+				Recv: &ast.FieldList{
+					List: []*ast.Field{
+						{
+							Names: []*ast.Ident{ast.NewIdent("s")},
+							Type:  &ast.StarExpr{X: ast.NewIdent("TestA")},
+						},
+					},
+				},
+				Name: ast.NewIdent("UnmarshalBSON"),
+				Type: &ast.FuncType{
+					Params: &ast.FieldList{
+						List: []*ast.Field{
+							{
+								Names: []*ast.Ident{ast.NewIdent("data")},
+								Type:  ast.NewIdent("[]byte"),
+							},
+						},
+					},
+					Results: &ast.FieldList{
+						List: []*ast.Field{
+							{Type: ast.NewIdent("error")},
+						},
+					},
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.AssignStmt{
+							Lhs: []ast.Expr{&ast.Ident{Name: "doc"}},
+							Tok: token.DEFINE,
+							Rhs: []ast.Expr{
+								&ast.CompositeLit{
+									Type: &ast.StructType{
+										Fields: &ast.FieldList{
+											List: []*ast.Field{
+												{
+													Names: []*ast.Ident{ast.NewIdent("Id")},
+													Type:  ast.NewIdent("uint64"),
+													Tag:   &ast.BasicLit{Kind: token.STRING, Value: "`bson:\"_id\"`"},
+												},
+												{
+													Names: []*ast.Ident{ast.NewIdent("A")},
+													Type:  ast.NewIdent("int64"),
+													Tag:   &ast.BasicLit{Kind: token.STRING, Value: "`bson:\"a\"`"},
+												},
+												{
+													Names: []*ast.Ident{ast.NewIdent("B")},
+													Type:  ast.NewIdent("int32"),
+													Tag:   &ast.BasicLit{Kind: token.STRING, Value: "`bson:\"b\"`"},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						&ast.IfStmt{
+							Init: &ast.AssignStmt{
+								Lhs: []ast.Expr{&ast.Ident{Name: "err"}},
+								Tok: token.DEFINE,
+								Rhs: []ast.Expr{&ast.CallExpr{
+									Fun:  ast.NewIdent("bson.Unmarshal"),
+									Args: []ast.Expr{ast.NewIdent("data"), &ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("doc")}},
+								}},
+							},
+							Cond: &ast.BinaryExpr{
+								X:  &ast.Ident{Name: "err"},
+								Op: token.NEQ,
+								Y:  &ast.Ident{Name: "nil"}, // nil值
+							},
+							Body: &ast.BlockStmt{
+								List: []ast.Stmt{
+									&ast.ReturnStmt{
+										Results: []ast.Expr{
+											&ast.Ident{Name: "err"},
+										},
+									},
+								},
+							},
+							Else: nil,
+						},
+						&ast.ExprStmt{
+							X: &ast.CallExpr{
+								Fun:  ast.NewIdent("s.SetId"),
+								Args: []ast.Expr{&ast.SelectorExpr{X: ast.NewIdent("doc"), Sel: ast.NewIdent("Id")}},
+							},
+						},
+						&ast.ExprStmt{
+							X: &ast.CallExpr{
+								Fun:  ast.NewIdent("s.SetA"),
+								Args: []ast.Expr{&ast.SelectorExpr{X: ast.NewIdent("doc"), Sel: ast.NewIdent("A")}},
+							},
+						},
+						&ast.ExprStmt{
+							X: &ast.CallExpr{
+								Fun:  ast.NewIdent("s.SetB"),
+								Args: []ast.Expr{&ast.SelectorExpr{X: ast.NewIdent("doc"), Sel: ast.NewIdent("B")}},
+							},
+						},
+						&ast.ReturnStmt{
+							Results: []ast.Expr{
+								ast.NewIdent("nil"),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
-	if false {
-		mongo_helper.Connect("") //todo 换成自己的mongo地址测试
-		defer mongo_helper.Close()
-		col := mongo_helper.GetCol("test", "model")
-
-		filter := bson.M{"_id": c.GetId()}
-		_, err := col.ReplaceOne(context.TODO(), filter, &c, options.Replace().SetUpsert(true))
-		if err != nil {
-			log.Fatal(err)
-		}
-		zz := model.TestC{}
-		err = col.FindOne(context.TODO(), filter).Decode(&zz)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(zz)
+	if err := printer.Fprint(os.Stdout, fset, file); err != nil {
+		panic(err)
 	}
 }

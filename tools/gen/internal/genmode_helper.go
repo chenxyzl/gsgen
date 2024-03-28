@@ -3,11 +3,16 @@ package internal
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+	"strconv"
 	"strings"
 )
 
 const bsonIgnoreTag = "`bson:\"-\"`"
 
+// checkStructField 检查是否合法的filed字段
 func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, withMongo bool) (out []*ast.Field) {
 	contain := false
 	for _, field := range structType.Fields.List {
@@ -112,6 +117,8 @@ func isLegalField(structNameIdent *ast.Ident, field *ast.Field) (bool, bool) {
 		}
 	}
 }
+
+// isLegalMList 是否合法的MList对象
 func isLegalMList(mlist *ast.IndexExpr) bool {
 	if listSelectExpr, listSelectExprOk := mlist.X.(*ast.SelectorExpr); !listSelectExprOk {
 		return false
@@ -122,6 +129,8 @@ func isLegalMList(mlist *ast.IndexExpr) bool {
 	}
 	return true
 }
+
+// isLegalMMap 是否合法的MMap对象
 func isLegalMMap(mmap *ast.IndexListExpr) bool {
 	if mapSelectExpr, mapSelectExprOk := mmap.X.(*ast.SelectorExpr); !mapSelectExprOk {
 		return false
@@ -133,6 +142,7 @@ func isLegalMMap(mmap *ast.IndexListExpr) bool {
 	return true
 }
 
+// getFieldTag 获取字段的tag
 func getFieldTag(structNameIdent *ast.Ident, field *ast.Field, tagName string) (string, bool) {
 	if field.Tag == nil || field.Tag.Value == "" {
 		return "", false
@@ -141,7 +151,7 @@ func getFieldTag(structNameIdent *ast.Ident, field *ast.Field, tagName string) (
 	fieldName := field.Names[0].Name
 	bsonTag := ""
 	for _, tag := range tags {
-		if strings.HasPrefix(tag, "bson:") {
+		if strings.HasPrefix(tag, tagName) {
 			if bsonTag != "" {
 				panic(fmt.Sprintf("类型:%v, 字段:%v, tag重复, tag:%v", structNameIdent, fieldName, bsonTag))
 			} else {
@@ -152,6 +162,7 @@ func getFieldTag(structNameIdent *ast.Ident, field *ast.Field, tagName string) (
 	return bsonTag, bsonTag != "" && bsonTag != "\"\""
 }
 
+// isBasicType 根据类型名字判断是否基本类型
 func isBasicType(typeStr string) bool {
 	basicTypes := []string{
 		"int", "int8", "int16", "int32", "int64",
@@ -167,9 +178,65 @@ func isBasicType(typeStr string) bool {
 	}
 	return false
 }
+
+// isBasicType1 根据类型是否基本类型
 func isBasicType1(expr ast.Expr) bool {
 	if ident, identOk := expr.(*ast.Ident); identOk {
 		return isBasicType(ident.Name)
 	}
 	return false
+}
+
+// addImport 增加包名
+func addImport(genFile *ast.File, imports ...string) {
+	// 添加导入语句
+	if len(imports) > 0 {
+		//importSpecs := make([]*ast.ImportSpec, 0, len(imports))
+		importSpecs := make([]ast.Spec, 0, len(imports))
+		for _, importPath := range imports {
+			importSpecs = append(importSpecs, &ast.ImportSpec{
+				Path: &ast.BasicLit{
+					Kind:  token.STRING,
+					Value: strconv.Quote(importPath),
+				},
+			})
+		}
+		genFile.Decls = append(genFile.Decls, &ast.GenDecl{
+			Tok:   token.IMPORT,
+			Specs: importSpecs,
+		})
+	}
+}
+
+// fieldNameToSetter 字段名字转Setter方法
+func fieldNameToSetter(fieldName string) string {
+	return "Set" + cases.Title(language.Und).String(fieldName)
+}
+
+// fieldNameToGetter 字段名字转Getter方法
+func fieldNameToGetter(fieldName string) string {
+	return "Get" + cases.Title(language.Und).String(fieldName)
+}
+
+// fieldNameToBigFiled 字段名字转首字母大写
+func fieldNameToBigFiled(fieldName string) string {
+	return cases.Title(language.Und).String(fieldName)
+}
+
+// buildUnnamedStruct 根据字段生成匿名struct
+func buildUnnamedStruct(fields []*ast.Field) *ast.StructType {
+	var structFieldList []*ast.Field
+	for _, field := range fields {
+		name := field.Names[0].Name //已提前检查
+		structFieldList = append(structFieldList, &ast.Field{
+			Names: []*ast.Ident{ast.NewIdent(fieldNameToBigFiled(name))},
+			Type:  field.Type,
+			Tag:   field.Tag,
+		})
+	}
+	return &ast.StructType{
+		Fields: &ast.FieldList{
+			List: structFieldList,
+		},
+	}
 }
