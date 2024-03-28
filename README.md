@@ -14,8 +14,8 @@
 - [X] AST生成实现mongo的bson.tag检查
 - [X] AST生成实现mongo序列化反序列化的代码生成
     - [X] 优化反序列化的filed为嵌套的model时候多了一次序列化反序列化的问题
-- [ ] AST生成实现Model的json序列化和反序列化--类bson
-- [ ] AST生成实现Model的string
+- [X] AST生成实现Model的json序列化和反序列化--类bson
+- [X] AST生成实现Model的string
 - [ ] AST生成实现mongo增量更新的代码生成
 - [X] 通过命令行来按需生成getter/setter/dirty/mongo
     - [X] 增加指令getter用作table和config的只读,默认导出不可配置
