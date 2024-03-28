@@ -6,12 +6,13 @@ import (
 	"go/ast"
 	"go/format"
 	"go/token"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const bsonIgnoreTag = "`bson:\"-\"`"

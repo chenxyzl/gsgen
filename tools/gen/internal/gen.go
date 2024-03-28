@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -67,16 +68,18 @@ func genFile(sourceFile string, needSetter bool, needBson bool) {
 	genAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
 	bsonAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
 
+	addImport(genAstFile, "fmt")
+	addImport(genAstFile, "encoding/json")
+	if needBson {
+		addImport(bsonAstFile, "go.mongodb.org/mongo-driver/bson")
+	}
+
 	ast.Inspect(srcFile, func(n ast.Node) bool {
 		if genDecl, genDeclOk := n.(*ast.GenDecl); genDeclOk { //头文件
 			if genDecl.Tok == token.IMPORT {
 				genAstFile.Decls = append(genAstFile.Decls, genDecl)
-				addImport(genAstFile, "fmt")
-				addImport(genAstFile, "encoding/json")
-				//bson import
 				if needBson {
 					bsonAstFile.Decls = append(bsonAstFile.Decls, genDecl)
-					addImport(bsonAstFile, "go.mongodb.org/mongo-driver/bson")
 				}
 			}
 		} else if spec, specOk := n.(*ast.TypeSpec); specOk { //类型定义
@@ -95,8 +98,23 @@ func genFile(sourceFile string, needSetter bool, needBson bool) {
 		}
 		return true
 	})
+	genAstFile.Imports = append(genAstFile.Imports, &ast.ImportSpec{
+		Path: &ast.BasicLit{
+			Kind:  token.STRING,
+			Value: strconv.Quote("fmt"),
+		},
+	}, &ast.ImportSpec{
+		Path: &ast.BasicLit{
+			Kind:  token.STRING,
+			Value: strconv.Quote("encoding/json"),
+		},
+	})
+	//
 	printOutFile(fileSet, genAstFile, strings.TrimSuffix(sourceFile, ".go")+".gen.go")
-	printOutFile(fileSet, bsonAstFile, strings.TrimSuffix(sourceFile, ".go")+".bson.go")
+
+	if needBson {
+		printOutFile(fileSet, bsonAstFile, strings.TrimSuffix(sourceFile, ".go")+".bson.go")
+	}
 }
 
 // generate 生成全部
