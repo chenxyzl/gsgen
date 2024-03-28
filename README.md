@@ -9,7 +9,7 @@
 
 ### todo
 - [X] MMap的k不为uint64时候,更新脏标记的编译错误
-- [ ] AST生成实现Model增加Clone方法的实现(因为同一个Model只能有1个父,方便多个点个用同一个值的情况)
+- [X] AST生成实现Model增加Clone方法的实现(因为同一个Model只能有1个父,方便多个点个用同一个值的情况)
 - [X] AST生成实现每个set都需要判断是否 value已经有父节点了
 - [X] AST生成实现bson的bson.tag检查
 - [X] AST生成实现bson序列化反序列化的代码生成
