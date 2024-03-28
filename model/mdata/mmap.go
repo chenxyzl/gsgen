@@ -13,7 +13,6 @@ type MMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 
 	dirtyAll         bool
 	inParentDirtyIdx any
 	dirtyParent      DirtyParentFunc
-	isNumKey         bool
 }
 
 func NewMMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64 | string, V any]() *MMap[K, V] {
@@ -24,8 +23,6 @@ func NewMMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int
 func (this *MMap[K, V]) init() {
 	this.data = make(map[K]V)
 	this.dirty = make(map[K]bool)
-	var k K
-	this.isNumKey = isNum(k)
 }
 
 // Len 长度
@@ -106,23 +103,7 @@ func (this *MMap[K, V]) IsDirty() bool {
 	if this.dirtyAll {
 		return true
 	}
-	if this.isNumKey {
-		return len(this.dirty) > 0
-	} else {
-		isDirty := false
-		this.Range(func(k K, v V) bool {
-			if mod, ok := any(v).(IDirtyModel); ok {
-				if mod.IsDirty() {
-					isDirty = true
-					return false
-				} else {
-					return true
-				}
-			}
-			return true
-		})
-		return isDirty
-	}
+	return len(this.dirty) > 0
 }
 
 func (this *MMap[K, V]) CleanDirty() {
