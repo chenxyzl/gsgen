@@ -11,7 +11,7 @@ import (
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "gen",
-		Short: "gen is a function generate, getter/setter/mongo",
+		Short: "gen is a function generate, getter/setter/bson",
 		Run: func(cmd *cobra.Command, args []string) {
 			//parse dir
 			dir, err := cmd.Flags().GetString("dir")
@@ -36,23 +36,23 @@ func main() {
 				panic(fmt.Sprintf("param parse err: setter, err:%v", err))
 			}
 
-			//parse mongo
-			genMongo, err := cmd.Flags().GetBool("mongo")
+			//parse bson
+			genBson, err := cmd.Flags().GetBool("bson")
 			if err != nil {
-				panic(fmt.Sprintf("param parse err: mongo, err:%v", err))
+				panic(fmt.Sprintf("param parse err: bson, err:%v", err))
 			}
 
 			//
-			fmt.Printf("dir: %v\nfile suffix: %v\ngen getter: true[must]\ngen setter: %v\ngen mongo:%v \n", fullDir, fileSuffix, genSetter, genMongo)
+			fmt.Printf("dir: %v\nfile suffix: %v\ngen getter: true[must]\ngen setter: %v\ngen bson:%v \n", fullDir, fileSuffix, genSetter, genBson)
 			//
-			internal.Gen(fullDir, fileSuffix, genSetter, genMongo)
+			internal.Gen(fullDir, fileSuffix, genSetter, genBson)
 		},
 	}
 	//增加默认命令
 	rootCmd.Flags().StringP("dir", "d", "model", "target dir")
 	rootCmd.Flags().StringSliceP("file_suffix", "f", []string{".model.go"}, "target file suffix")
 	rootCmd.Flags().BoolP("setter", "s", false, "gen setter")
-	rootCmd.Flags().BoolP("mongo", "m", false, "gen mongo")
+	rootCmd.Flags().BoolP("bson", "b", false, "gen bson")
 
 	// 添加命令
 	rootCmd.AddCommand(versionCmd())

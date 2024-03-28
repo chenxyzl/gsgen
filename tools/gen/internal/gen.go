@@ -56,7 +56,7 @@ func readFileList(dir string, fileSuffix []string) []string {
 }
 
 // genFile 生成文件
-func genFile(sourceFile string, needSetter bool, needMongo bool) {
+func genFile(sourceFile string, needSetter bool, needBson bool) {
 	// 解析源代码
 	fileSet := token.NewFileSet()
 	srcFile, err := parser.ParseFile(fileSet, sourceFile, nil, parser.ParseComments)
@@ -65,7 +65,7 @@ func genFile(sourceFile string, needSetter bool, needMongo bool) {
 	}
 
 	genAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
-	mongoAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
+	bsonAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
 
 	ast.Inspect(srcFile, func(n ast.Node) bool {
 		if genDecl, genDeclOk := n.(*ast.GenDecl); genDeclOk { //头文件
@@ -73,10 +73,10 @@ func genFile(sourceFile string, needSetter bool, needMongo bool) {
 				genAstFile.Decls = append(genAstFile.Decls, genDecl)
 				addImport(genAstFile, "fmt")
 				addImport(genAstFile, "encoding/json")
-				//mongo import
-				if needMongo {
-					mongoAstFile.Decls = append(mongoAstFile.Decls, genDecl)
-					addImport(mongoAstFile, "go.mongodb.org/mongo-driver/bson")
+				//bson import
+				if needBson {
+					bsonAstFile.Decls = append(bsonAstFile.Decls, genDecl)
+					addImport(bsonAstFile, "go.mongodb.org/mongo-driver/bson")
 				}
 			}
 		} else if spec, specOk := n.(*ast.TypeSpec); specOk { //类型定义
@@ -85,18 +85,18 @@ func genFile(sourceFile string, needSetter bool, needMongo bool) {
 				return true
 			}
 			//检查需要生成的Field
-			fields := checkStructField(spec.Name, structType, needMongo)
+			fields := checkStructField(spec.Name, structType, needBson)
 			//
 			generate(genAstFile, spec.Name, fields, needSetter)
-			//mongo 开始生成
-			if needMongo {
-				generateMongo(mongoAstFile, spec.Name, fields)
+			//bson 开始生成
+			if needBson {
+				generateBson(bsonAstFile, spec.Name, fields)
 			}
 		}
 		return true
 	})
 	printOutFile(fileSet, genAstFile, strings.TrimSuffix(sourceFile, ".go")+".gen.go")
-	printOutFile(fileSet, mongoAstFile, strings.TrimSuffix(sourceFile, ".go")+".mongo.go")
+	printOutFile(fileSet, bsonAstFile, strings.TrimSuffix(sourceFile, ".go")+".bson.go")
 }
 
 // generate 生成全部

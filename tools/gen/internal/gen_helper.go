@@ -17,7 +17,7 @@ import (
 const bsonIgnoreTag = "`bson:\"-\"`"
 
 // checkStructField 检查是否合法的filed字段
-func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, withMongo bool) (out []*ast.Field) {
+func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, withBson bool) (out []*ast.Field) {
 	contain := false
 	for _, field := range structType.Fields.List {
 		isDirtyModel, needGenField := isLegalField(structNameIdent, field)
@@ -31,8 +31,8 @@ func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, wi
 		//
 		if isDirtyModel {
 			contain = true
-			//生成mongo时候 tag必须设置为bsonIgnoreTag
-			if withMongo {
+			//生成bson时候 tag必须设置为bsonIgnoreTag
+			if withBson {
 				if field.Tag.Value != bsonIgnoreTag {
 					panic(fmt.Sprintf("类型:%v, 字段:%v, 只能是%v 当前是:%v", structNameIdent, "DirtyModel", bsonIgnoreTag, field.Tag.Value))
 				}
@@ -41,11 +41,11 @@ func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, wi
 		//
 		if needGenField {
 			out = append(out, field)
-			//生成mongo tag必须要有bson:
-			if withMongo {
+			//生成bson tag必须要有bson:
+			if withBson {
 				_, found := getFieldTag(structNameIdent, field, "bson:")
 				if !found {
-					panic(fmt.Sprintf("类型:%v, 字段:%v, 需要生成mongo, 但是缺少tag.bson:, 如需忽略请设置为:%v", structNameIdent, field.Names[0].Name, bsonIgnoreTag))
+					panic(fmt.Sprintf("类型:%v, 字段:%v, 需要生成bson, 但是缺少tag.bson:, 如需忽略请设置为:%v", structNameIdent, field.Names[0].Name, bsonIgnoreTag))
 				}
 			}
 		}

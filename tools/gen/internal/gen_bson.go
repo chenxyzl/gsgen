@@ -6,13 +6,14 @@ import (
 	"go/token"
 )
 
-// generateMongo 生成mongo的marshal/unmarshal方法
-func generateMongo(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
-	genMongoMarshal(file, structTypeExpr, fields)
-	genMongoUnmarshal(file, structTypeExpr, fields)
+// generateBson 生成bson的marshal/unmarshal方法
+func generateBson(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
+	genBsonMarshal(file, structTypeExpr, fields)
+	genBsonUnmarshal(file, structTypeExpr, fields)
 }
 
-func genMongoMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
+// genBsonMarshal bson的marshal
+func genBsonMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
 	compositeLit := &ast.CompositeLit{
 		Type: ast.NewIdent("bson.M"),
 		Elts: []ast.Expr{},
@@ -79,7 +80,8 @@ func genMongoMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fi
 	file.Decls = append(file.Decls, f)
 }
 
-func genMongoUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
+// genBsonUnmarshal bson的Unmarshal
+func genBsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
 	var setList []ast.Stmt
 	for _, field := range fields {
 		name := field.Names[0].Name //已提前检查

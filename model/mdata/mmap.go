@@ -65,7 +65,7 @@ func (this *MMap[K, V]) Set(k K, v V) {
 	this.updateDirty(k)
 }
 
-// Remove 删除 注:因为删除不太好处理list对应的mongo的更新,所以这里用了DirtyAll
+// Remove 删除 注:因为删除不太好处理list对应的bson的更新,所以这里用了DirtyAll
 func (this *MMap[K, V]) Remove(k K) {
 	if this == nil {
 		panic("map is nil")

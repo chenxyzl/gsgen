@@ -84,7 +84,7 @@ func (this *MList[T]) Append(vs ...T) {
 	}
 }
 
-// Remove 删除 注:因为删除不太好处理list对应的mongo的更新,所以这里用了DirtyAll
+// Remove 删除 注:因为删除不太好处理list对应的bson的更新,所以这里用了DirtyAll
 func (this *MList[T]) Remove(idx int) {
 	if this == nil {
 		panic("data is nil")
