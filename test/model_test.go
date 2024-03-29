@@ -9,7 +9,6 @@ import (
 	"gen_tools/test/mongo_helper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
 	"math"
 	"testing"
 )
@@ -98,12 +97,33 @@ func TestMongoLoadSave(t *testing.T) {
 		filter := bson.M{"_id": c.GetId()}
 		_, err := col.ReplaceOne(context.TODO(), filter, &c, options.Replace().SetUpsert(true))
 		if err != nil {
-			log.Fatal(err)
+			t.Error(err)
 		}
 		zz := model.TestC{}
 		err = col.FindOne(context.TODO(), filter).Decode(&zz)
 		if err != nil {
-			log.Fatal(err)
+			t.Error(err)
+		}
+		fmt.Println(zz)
+	}
+}
+func TestDirtyUpdate(t *testing.T) {
+	if false {
+		mongo_helper.Connect("") //todo 换成自己的mongo地址测试
+		defer mongo_helper.Close()
+		col := mongo_helper.GetCol("test", "model")
+
+		filter := bson.M{"_id": 789}
+		update1 := bson.M{"y.d.100.b": 1022, "y.d.110.a": 1111}
+		v, err := col.UpdateOne(context.TODO(), filter, bson.M{"$set": update1}, options.Update().SetUpsert(true))
+		if err != nil {
+			t.Error(err)
+		}
+		_ = v
+		zz := model.TestC{}
+		err = col.FindOne(context.TODO(), filter).Decode(&zz)
+		if err != nil {
+			t.Error(err)
 		}
 		fmt.Println(zz)
 	}
