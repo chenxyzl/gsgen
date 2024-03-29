@@ -21,43 +21,44 @@ type DirtyModel struct {
 	dirtyParent      DirtyParentFunc
 }
 
-func (this *DirtyModel) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
-	if this == nil {
+// SetParent 设置父节点
+func (s *DirtyModel) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
+	if s == nil {
 		return
 	}
-	if this.dirtyParent != nil {
+	if s.dirtyParent != nil {
 		panic("model被重复设置了父节点,请先从老节点移除")
 	}
-	this.inParentDirtyIdx = idx
-	this.dirtyParent = dirtyParentFunc
+	s.inParentDirtyIdx = idx
+	s.dirtyParent = dirtyParentFunc
 }
-func (this *DirtyModel) IsDirty() bool {
-	return this.dirty > 0
+
+// IsDirty 是否为脏
+func (s *DirtyModel) IsDirty() bool {
+	return s.dirty > 0
 }
-func (this *DirtyModel) CleanDirty() {
-	if this == nil {
+
+// CleanDirty 清除脏标记
+func (s *DirtyModel) CleanDirty() {
+	if s == nil {
 		return
 	}
-	d := this.dirty
+	d := s.dirty
 	if d == 0 {
 		return
 	} else {
-		this.dirty = 0
-	}
-}
-func (this *DirtyModel) UpdateDirty(tn any) {
-	n := uint64(tn.(int))
-	if this.dirty&n == n {
-		return
-	}
-	this.dirty |= n
-	if this.dirtyParent != nil {
-		this.dirtyParent.Invoke(this.inParentDirtyIdx)
+		s.dirty = 0
 	}
 }
 
-func (this *DirtyModel) CheckSetBefore() {
-	if this.dirtyParent != nil {
-		panic("model被重复设置了父节点,请先从老节点移除")
+// UpdateDirty 脏标记更新
+func (s *DirtyModel) UpdateDirty(tn any) {
+	n := uint64(tn.(int))
+	if s.dirty&n == n {
+		return
+	}
+	s.dirty |= n
+	if s.dirtyParent != nil {
+		s.dirtyParent.Invoke(s.inParentDirtyIdx)
 	}
 }

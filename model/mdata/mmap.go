@@ -24,100 +24,103 @@ func NewMMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int
 	ret.init()
 	return ret
 }
-func (this *MMap[K, V]) init() {
-	this.data = make(map[K]V)
-	this.dirty = make(map[K]bool)
+func (s *MMap[K, V]) init() {
+	s.data = make(map[K]V)
+	s.dirty = make(map[K]bool)
 }
 
 // Len 长度
-func (this *MMap[K, V]) Len() int {
-	if this == nil {
+func (s *MMap[K, V]) Len() int {
+	if s == nil {
 		return 0
 	}
-	return len(this.data)
+	return len(s.data)
 }
 
 // Reset 重置清空list
-func (this *MMap[K, V]) Reset() {
-	if this == nil {
+func (s *MMap[K, V]) Reset() {
+	if s == nil {
 		return
 	}
-	this.data = make(map[K]V)
-	this.updateDirtyAll()
+	s.data = make(map[K]V)
+	s.updateDirtyAll()
 }
 
 // Get 设置值
-func (this *MMap[K, V]) Get(k K) V {
-	if this == nil {
+func (s *MMap[K, V]) Get(k K) V {
+	if s == nil {
 		panic("map is nil")
 	}
-	return this.data[k]
+	return s.data[k]
 }
 
 // Set 设置新值
-func (this *MMap[K, V]) Set(k K, v V) {
-	if this == nil {
+func (s *MMap[K, V]) Set(k K, v V) {
+	if s == nil {
 		panic("map is nil")
 	}
 	//
-	checkSetParent(v, k, this.updateDirty)
-	this.data[k] = v
-	this.updateDirty(k)
+	checkSetParent(v, k, s.updateDirty)
+	s.data[k] = v
+	s.updateDirty(k)
 }
 
 // Remove 删除 注:因为删除不太好处理list对应的bson的更新,所以这里用了DirtyAll
-func (this *MMap[K, V]) Remove(k K) {
-	if this == nil {
+func (s *MMap[K, V]) Remove(k K) {
+	if s == nil {
 		panic("map is nil")
 	}
-	if _, ok := this.data[k]; !ok {
+	if _, ok := s.data[k]; !ok {
 		return
 	}
-	delete(this.data, k)
-	this.updateDirty(k)
+	delete(s.data, k)
+	s.updateDirty(k)
 }
 
 // Range 遍历
-func (this *MMap[K, V]) Range(f func(K, V) bool) {
-	if this == nil {
+func (s *MMap[K, V]) Range(f func(K, V) bool) {
+	if s == nil {
 		panic("map is nil")
 	}
 	if f == nil {
 		return
 	}
-	for k, v := range this.data {
+	for k, v := range s.data {
 		if _continue := f(k, v); !_continue {
 			break
 		}
 	}
 }
 
-func (this *MMap[K, V]) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
-	if this == nil {
+// SetParent 设置父节点
+func (s *MMap[K, V]) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
+	if s == nil {
 		return
 	}
-	if this.dirtyParent != nil {
+	if s.dirtyParent != nil {
 		panic("model被重复设置了父节点,请先从老节点移除")
 	}
-	this.inParentDirtyIdx = idx
-	this.dirtyParent = dirtyParentFunc
+	s.inParentDirtyIdx = idx
+	s.dirtyParent = dirtyParentFunc
 }
 
-func (this *MMap[K, V]) IsDirty() bool {
-	if this.dirtyAll {
+// IsDirty 是否为脏
+func (s *MMap[K, V]) IsDirty() bool {
+	if s.dirtyAll {
 		return true
 	}
-	return len(this.dirty) > 0
+	return len(s.dirty) > 0
 }
 
-func (this *MMap[K, V]) CleanDirty() {
-	if this == nil {
+// CleanDirty 清楚脏标记
+func (s *MMap[K, V]) CleanDirty() {
+	if s == nil {
 		return
 	}
-	if this.dirtyAll {
+	if s.dirtyAll {
 		var v V
 		if _, ok := (any(v)).(IDirtyModel); ok {
-			this.Range(func(k K, v V) bool {
+			s.Range(func(k K, v V) bool {
 				(any(v)).(IDirtyModel).CleanDirty()
 				return true
 			})
@@ -125,77 +128,79 @@ func (this *MMap[K, V]) CleanDirty() {
 	} else {
 		var v V
 		if _, ok := (any(v)).(IDirtyModel); ok {
-			for nk := range this.dirty {
-				(any(this.Get(nk))).(IDirtyModel).CleanDirty()
+			for nk := range s.dirty {
+				(any(s.Get(nk))).(IDirtyModel).CleanDirty()
 			}
 		}
 
 	}
-	this.dirtyAll = false
-	clear(this.dirty)
+	s.dirtyAll = false
+	clear(s.dirty)
 }
 
 // updateDirty 更新藏标记
-func (this *MMap[K, V]) updateDirty(tk any) {
+func (s *MMap[K, V]) updateDirty(tk any) {
 	k := tk.(K)
 	//如果已经allDirty了就不用管了
-	if this.dirtyAll || this.dirty[k] {
+	if s.dirtyAll || s.dirty[k] {
 		return
 	}
-	this.dirty[k] = true
-	if this.dirtyParent != nil {
-		this.dirtyParent.Invoke(this.inParentDirtyIdx)
+	s.dirty[k] = true
+	if s.dirtyParent != nil {
+		s.dirtyParent.Invoke(s.inParentDirtyIdx)
 	}
 }
-func (this *MMap[K, V]) updateDirtyAll() {
-	if this.dirtyAll {
+
+// updateDirtyAll 更新整个对象为脏
+func (s *MMap[K, V]) updateDirtyAll() {
+	if s.dirtyAll {
 		return
 	}
-	this.dirtyAll = true
-	if this.dirtyParent != nil {
-		this.dirtyParent.Invoke(this.inParentDirtyIdx)
+	s.dirtyAll = true
+	if s.dirtyParent != nil {
+		s.dirtyParent.Invoke(s.inParentDirtyIdx)
 	}
 }
 
 // String toString
-func (this *MMap[K, V]) String() string {
-	return fmt.Sprintf("%v", this.data)
+func (s *MMap[K, V]) String() string {
+	return fmt.Sprintf("%v", s.data)
 }
 
 // MarshalJSON json序列化
-func (this *MMap[K, V]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(this.data)
+func (s *MMap[K, V]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.data)
 }
 
 // UnmarshalJSON json反序列化
-func (this *MMap[K, V]) UnmarshalJSON(data []byte) error {
+func (s *MMap[K, V]) UnmarshalJSON(data []byte) error {
 	var m map[K]V
 	if err := json.Unmarshal(data, &m); err != nil {
 		return err
 	}
-	this.init()
+	s.init()
 	for k, v := range m {
-		this.Set(k, v)
+		s.Set(k, v)
 	}
 	return nil
 }
 
 // MarshalBSON bson序列化
-func (this *MMap[K, V]) MarshalBSON() ([]byte, error) {
-	r, r1, r2 := bson.MarshalValue(this.data)
+func (s *MMap[K, V]) MarshalBSON() ([]byte, error) {
+	r, r1, r2 := bson.MarshalValue(s.data)
 	_ = r
 	return r1, r2
 }
 
 // UnmarshalBSON bson反序列化
-func (this *MMap[K, V]) UnmarshalBSON(data []byte) error {
+func (s *MMap[K, V]) UnmarshalBSON(data []byte) error {
 	var m map[K]V
 	if err := bson.UnmarshalValue(bson.TypeEmbeddedDocument, data, &m); err != nil {
 		return err
 	}
-	this.init()
+	s.init()
 	for k, v := range m {
-		this.Set(k, v)
+		s.Set(k, v)
 	}
 	return nil
 }

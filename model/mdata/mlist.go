@@ -21,187 +21,192 @@ func NewList[T any]() *MList[T] {
 	ret.init()
 	return ret
 }
-func (this *MList[T]) init() {
-	this.data = make([]T, 0)
-	this.dirty = make(map[uint64]bool)
+func (s *MList[T]) init() {
+	s.data = make([]T, 0)
+	s.dirty = make(map[uint64]bool)
 }
 
 // Len 长度
-func (this *MList[T]) Len() int {
-	if this == nil {
+func (s *MList[T]) Len() int {
+	if s == nil {
 		return 0
 	}
-	return len(this.data)
+	return len(s.data)
 }
 
 // Reset 重置清空list
-func (this *MList[T]) Reset() {
-	if this == nil {
+func (s *MList[T]) Reset() {
+	if s == nil {
 		return
 	}
-	this.data = make([]T, 0)
-	this.updateDirtyAll()
+	s.data = make([]T, 0)
+	s.updateDirtyAll()
 }
 
 // Get 设置值
-func (this *MList[T]) Get(idx int) T {
-	if this == nil {
+func (s *MList[T]) Get(idx int) T {
+	if s == nil {
 		panic("MList is nil")
 	}
-	l := this.Len()
+	l := s.Len()
 	if idx >= l {
 		panic(fmt.Sprintf("MList get idx out of range, len:%d|idx:%d", l, idx))
 	}
-	return this.data[idx]
+	return s.data[idx]
 }
 
 // Set 设置新值
-func (this *MList[T]) Set(idx uint64, v T) {
-	if this == nil {
+func (s *MList[T]) Set(idx uint64, v T) {
+	if s == nil {
 		panic("data is nil")
 	}
-	l := uint64(this.Len())
+	l := uint64(s.Len())
 	if idx >= l {
 		panic(fmt.Sprintf("MList set idx out of range, len:%d|idx:%d", l, idx))
 	}
 	//
-	checkSetParent(v, idx, this.updateDirty)
-	this.data[idx] = v
-	this.updateDirty(idx)
+	checkSetParent(v, idx, s.updateDirty)
+	s.data[idx] = v
+	s.updateDirty(idx)
 }
 
 // Append 追加
-func (this *MList[T]) Append(vs ...T) {
-	if this == nil {
+func (s *MList[T]) Append(vs ...T) {
+	if s == nil {
 		panic("data is nil")
 	}
 	for _, v := range vs {
-		idx := uint64(this.Len())
+		idx := uint64(s.Len())
 		//
-		checkSetParent(v, idx, this.updateDirty)
-		this.data = append(this.data, v)
-		this.updateDirty(idx)
+		checkSetParent(v, idx, s.updateDirty)
+		s.data = append(s.data, v)
+		s.updateDirty(idx)
 	}
 }
 
 // Remove 删除 注:因为删除不太好处理list对应的bson的更新,所以这里用了DirtyAll
-func (this *MList[T]) Remove(idx int) {
-	if this == nil {
+func (s *MList[T]) Remove(idx int) {
+	if s == nil {
 		panic("data is nil")
 	}
-	l := this.Len()
+	l := s.Len()
 	if idx >= l {
 		panic(fmt.Sprintf("MList remove idx out of range, len:%d|idx:%d", l, idx))
 	}
-	this.data = append(this.data[0:idx], this.data[idx+1:]...)
-	this.updateDirtyAll()
+	s.data = append(s.data[0:idx], s.data[idx+1:]...)
+	s.updateDirtyAll()
 }
 
 // Range 遍历
-func (this *MList[T]) Range(f func(idx int, v T) bool) {
-	if this == nil {
+func (s *MList[T]) Range(f func(idx int, v T) bool) {
+	if s == nil {
 		panic("MList is nil")
 	}
 	if f == nil {
 		return
 	}
-	for idx, v := range this.data {
+	for idx, v := range s.data {
 		if _continue := f(idx, v); !_continue {
 			break
 		}
 	}
 }
 
-func (this *MList[T]) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
-	if this == nil {
+// SetParent 设置父节点
+func (s *MList[T]) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
+	if s == nil {
 		return
 	}
-	if this.dirtyParent != nil {
+	if s.dirtyParent != nil {
 		panic("model被重复设置了父节点,请先从老节点移除")
 	}
-	this.inParentDirtyIdx = idx
-	this.dirtyParent = dirtyParentFunc
+	s.inParentDirtyIdx = idx
+	s.dirtyParent = dirtyParentFunc
 }
 
-func (this *MList[T]) IsDirty() bool {
-	return len(this.dirty) > 0
+// IsDirty 是否为脏
+func (s *MList[T]) IsDirty() bool {
+	return len(s.dirty) > 0
 }
 
-func (this *MList[T]) CleanDirty() {
-	if this == nil {
+// CleanDirty 清楚脏标记
+func (s *MList[T]) CleanDirty() {
+	if s == nil {
 		return
 	}
 	var v T //todo 类型不一定是uint64
 	if _, ok := (any(v)).(IDirtyModel); ok {
-		this.Range(func(idx int, v T) bool {
+		s.Range(func(idx int, v T) bool {
 			(any(v)).(IDirtyModel).CleanDirty()
 			return true
 		})
 	}
-	clear(this.dirty)
+	clear(s.dirty)
 }
 
-func (this *MList[T]) updateDirty(a any) {
+// updateDirty 标记脏
+func (s *MList[T]) updateDirty(a any) {
 	n := a.(uint64)
 	//如果已经allDirty了就不用管了
-	if this.dirtyAll || this.dirty[n] {
+	if s.dirtyAll || s.dirty[n] {
 		return
 	}
-	this.dirty[n] = true
-	if this.dirtyParent != nil {
-		this.dirtyParent.Invoke(this.inParentDirtyIdx)
+	s.dirty[n] = true
+	if s.dirtyParent != nil {
+		s.dirtyParent.Invoke(s.inParentDirtyIdx)
 	}
 }
 
-func (this *MList[T]) updateDirtyAll() {
-	if this.dirtyAll {
+// updateDirtyAll 标记所有都为脏
+func (s *MList[T]) updateDirtyAll() {
+	if s.dirtyAll {
 		return
 	}
-	this.dirtyAll = true
-	if this.dirtyParent != nil {
-		this.dirtyParent.Invoke(this.inParentDirtyIdx)
+	s.dirtyAll = true
+	if s.dirtyParent != nil {
+		s.dirtyParent.Invoke(s.inParentDirtyIdx)
 	}
 }
 
 // String toString
-func (this *MList[T]) String() string {
-	return fmt.Sprintf("%v", this.data)
+func (s *MList[T]) String() string {
+	return fmt.Sprintf("%v", s.data)
 }
 
 // MarshalJSON json序列化
-func (this *MList[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(this.data)
+func (s *MList[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.data)
 }
 
 // UnmarshalJSON json反序列化
-func (this *MList[T]) UnmarshalJSON(data []byte) error {
+func (s *MList[T]) UnmarshalJSON(data []byte) error {
 	var list []T
 	if err := json.Unmarshal(data, &list); err != nil {
 		return err
 	}
-	this.init()
+	s.init()
 	for _, v := range list {
-		this.Append(v)
+		s.Append(v)
 	}
 	return nil
 }
 
 // MarshalBSON bson序列化
-func (this *MList[T]) MarshalBSON() ([]byte, error) {
-	r, r1, r2 := bson.MarshalValue(this.data)
+func (s *MList[T]) MarshalBSON() ([]byte, error) {
+	r, r1, r2 := bson.MarshalValue(s.data)
 	_ = r
 	return r1, r2
 }
 
 // UnmarshalBSON bson反序列化
-func (this *MList[T]) UnmarshalBSON(data []byte) error {
+func (s *MList[T]) UnmarshalBSON(data []byte) error {
 	var list []T
 	if err := bson.UnmarshalValue(bson.TypeArray, data, &list); err != nil {
 		return err
 	}
-	this.init()
+	s.init()
 	for _, v := range list {
-		this.Append(v)
+		s.Append(v)
 	}
 	return nil
 }
