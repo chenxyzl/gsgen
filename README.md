@@ -1,11 +1,5 @@
-## code gen; gen getter/setter/bson
-### wanted
-- 生成getter 可选生成setter(为了给后面table和config做readonly)
-    - [X] 已能生成getter和setter
-    - [X] 已支持基本类型，嵌套struct，支持Map和List（全类型）
-- 生成bson的marshal/unmarshal/增量更新
-    - [X] 已手动实现marshal/unmarshal
-    - [X] 已支持基本类型，嵌套struct，支持Map和List（全类型）
+## gen_tools
+- 用go的ast来生成struct对象的方法列表getter,setter,json.Marshal/Unmarshal,bson.Marshal/Unmarshal,String,clone,支持增量mongo的更新
 
 ### todo
 - [X] MMap的k不为uint64时候,更新脏标记的编译错误
