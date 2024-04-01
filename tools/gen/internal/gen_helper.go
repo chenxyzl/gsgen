@@ -16,6 +16,7 @@ import (
 )
 
 const bsonIgnoreTag = "`bson:\"-\"`"
+const maxFieldCount = 63
 
 // checkStructField 检查是否合法的filed字段
 func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, withBson bool) (out []*ast.Field) {
@@ -53,6 +54,9 @@ func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, wi
 	}
 	if !contain {
 		panic(fmt.Sprintf("类型:%v, 必须包含DirtyModel", structNameIdent))
+	}
+	if len(out) > maxFieldCount {
+		panic(fmt.Sprintf("类型:%v, 最多只能有%d可导出的字段(因脏标记限制),现在有:%d", structNameIdent, maxFieldCount, len(out)))
 	}
 	return out
 }

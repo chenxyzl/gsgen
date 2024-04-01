@@ -10,7 +10,7 @@
     - [X] 优化反序列化的filed为嵌套的model时候多了一次序列化反序列化的问题
 - [X] AST生成实现Model的json序列化和反序列化--类bson
 - [X] AST生成实现Model的string
-- [ ] AST生成实现bson增量更新的代码生成
+- [X] AST生成实现bson增量更新的代码生成
 - [X] 通过命令行来按需生成getter/setter/dirty/bson
     - [X] 增加指令getter用作table和config的只读,默认导出不可配置
     - [X] 增加指令-s,setter用于区分权限

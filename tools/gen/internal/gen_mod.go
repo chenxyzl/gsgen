@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"strconv"
@@ -108,9 +109,20 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 					Sel: ast.NewIdent("UpdateDirty"),
 				},
 				Args: []ast.Expr{
-					&ast.BasicLit{
-						Kind:  token.INT,
-						Value: strconv.Itoa(idx),
+					//&ast.BasicLit{
+					//	Kind:  token.INT,
+					//	Value: strconv.Itoa(idx),
+					//},
+					&ast.BinaryExpr{
+						X: &ast.BasicLit{
+							Kind:  token.INT,
+							Value: "1",
+						}, // 左操作数
+						Op: token.SHL, // 左移操作
+						Y: &ast.BasicLit{
+							Kind:  token.INT,
+							Value: fmt.Sprintf("%d", idx),
+						}, // 右操作数
 					},
 				},
 			},
@@ -138,38 +150,6 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 		},
 		Body: &ast.BlockStmt{
 			List: setterBody,
-		},
-	})
-}
-
-// generateClean 生成clean
-func generateClean(file *ast.File, structTypeExpr *ast.Ident) {
-	var cleanStructBody []ast.Stmt
-	//生成clean方法
-	file.Decls = append(file.Decls, &ast.FuncDecl{
-		Name: ast.NewIdent("CleanDirty"),
-		Type: &ast.FuncType{},
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
-		Body: &ast.BlockStmt{
-			List: append([]ast.Stmt{ //先clean自己
-				&ast.ExprStmt{
-					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("s.DirtyModel"),
-							Sel: ast.NewIdent("CleanDirty"),
-						},
-					},
-				},
-			},
-				cleanStructBody..., //再clean-field
-			),
 		},
 	})
 }

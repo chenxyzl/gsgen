@@ -1,5 +1,13 @@
 package mdata
 
+import (
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"math"
+)
+
+const DirtyAll = math.MaxUint64
+
 // test
 type testDirtyModel struct{ DirtyModel }
 
@@ -12,7 +20,7 @@ var _ IDirtyModel = (*MMap[int, int])(nil)
 type IDirtyModel interface {
 	SetParent(idx any, dirtyParentFunc DirtyParentFunc)
 	IsDirty() bool
-	CleanDirty()
+	CleanDirty(withChildren bool)
 }
 
 // checkSetParent 设置对象的父节点
@@ -20,4 +28,26 @@ func checkSetParent(v any, idx any, dirtyParentFunc DirtyParentFunc) {
 	if dirty, ok := v.(IDirtyModel); ok {
 		dirty.SetParent(idx, dirtyParentFunc)
 	}
+}
+
+// MakeBsonKey 构造bson.key
+func MakeBsonKey(key any, preKey string) string {
+	if preKey == "" {
+		return fmt.Sprintf("%v", key)
+	}
+	return fmt.Sprintf("%v.%v", preKey, key)
+}
+
+func AddSetDirtyM(m bson.M, k string, v any) {
+	if _, ok := m["$set"]; !ok {
+		m["$set"] = bson.M{}
+	}
+	m["$set"].(bson.M)[k] = v
+}
+
+func AddUnsetDirtyM(m bson.M, k string) {
+	if _, ok := m["$unset"]; !ok {
+		m["$unset"] = bson.M{}
+	}
+	m["$unset"].(bson.M)[k] = ""
 }

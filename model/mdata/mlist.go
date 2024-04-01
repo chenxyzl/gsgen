@@ -130,17 +130,20 @@ func (s *MList[T]) IsDirty() bool {
 }
 
 // CleanDirty 清楚脏标记
-func (s *MList[T]) CleanDirty() {
+func (s *MList[T]) CleanDirty(withChildren bool) {
 	if s == nil {
 		return
 	}
-	var v T //todo 类型不一定是uint64
-	if _, ok := (any(v)).(IDirtyModel); ok {
-		s.Range(func(idx int, v T) bool {
-			(any(v)).(IDirtyModel).CleanDirty()
-			return true
-		})
+	if withChildren {
+		var v T //todo 类型不一定是uint64
+		if _, ok := (any(v)).(IDirtyModel); ok {
+			s.Range(func(idx int, v T) bool {
+				(any(v)).(IDirtyModel).CleanDirty(withChildren)
+				return true
+			})
+		}
 	}
+	s.dirtyAll = false
 	clear(s.dirty)
 }
 
@@ -209,4 +212,20 @@ func (s *MList[T]) UnmarshalBSON(data []byte) error {
 		s.Append(v)
 	}
 	return nil
+}
+
+// BuildDirty bson的增量更新
+func (s *MList[T]) BuildDirty(m bson.M, preKey string) {
+	if len(s.dirty) == 0 && !s.dirtyAll {
+		return
+	}
+	if s.dirtyAll {
+		AddSetDirtyM(m, preKey, s)
+	} else {
+		for idx, v := range s.dirty {
+			AddSetDirtyM(m, MakeBsonKey(fmt.Sprintf("%d", idx), preKey), v)
+		}
+	}
+	s.CleanDirty(false)
+	return
 }

@@ -1,11 +1,5 @@
 package mdata
 
-import (
-	"math"
-)
-
-const DirtyAll = math.MaxUint64
-
 type DirtyParentFunc func(dirtyIdx any)
 
 func (f DirtyParentFunc) Invoke(dirtyIdx any) {
@@ -39,7 +33,7 @@ func (s *DirtyModel) IsDirty() bool {
 }
 
 // CleanDirty 清除脏标记
-func (s *DirtyModel) CleanDirty() {
+func (s *DirtyModel) CleanDirty(withChildren bool) {
 	if s == nil {
 		return
 	}
@@ -61,4 +55,9 @@ func (s *DirtyModel) UpdateDirty(tn any) {
 	if s.dirtyParent != nil {
 		s.dirtyParent.Invoke(s.inParentDirtyIdx)
 	}
+}
+
+// GetDirty 获取脏值
+func (s *DirtyModel) GetDirty() uint64 {
+	return s.dirty
 }

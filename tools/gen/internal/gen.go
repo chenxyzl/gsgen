@@ -129,5 +129,4 @@ func generate(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, ne
 	genJsonMarshal(file, structTypeExpr, fields)
 	genJsonUnmarshal(file, structTypeExpr, fields)
 	genClone(file, structTypeExpr)
-	generateClean(file, structTypeExpr)
 }

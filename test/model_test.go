@@ -53,7 +53,7 @@ func TestMongoLoadSave(t *testing.T) {
 	v22.SetA(111)
 	v22.SetB(112)
 	b.GetD().Set("110", v22)
-	b.CleanDirty()
+	b.CleanDirty(true)
 
 	c := model.TestC{}
 	c.SetId(789)
@@ -69,7 +69,7 @@ func TestMongoLoadSave(t *testing.T) {
 	if e != nil {
 		panic(e)
 	}
-	fmt.Printf("m2:%v\n", &m2)
+	fmt.Printf("m2:%+v\n", &m2)
 
 	n1, e := json.Marshal(&c)
 	if e != nil {
@@ -80,14 +80,14 @@ func TestMongoLoadSave(t *testing.T) {
 	if e != nil {
 		panic(e)
 	}
-	fmt.Printf("n2:%v\n", &n2)
+	fmt.Printf("n2:%+v\n", &n2)
 	n3, e := n2.Clone()
 	if e != nil {
 		panic(e)
 	}
 	n3.GetY().GetC().Get(0).SetB(99999)
-	fmt.Printf("n2:%v\n", &n2)
-	fmt.Printf("n3:%v\n", n3)
+	fmt.Printf("n2:%+v\n", &n2)
+	fmt.Printf("n3:%+v\n", n3)
 
 	if false {
 		mongo_helper.Connect("") //todo 换成自己的mongo地址测试
@@ -104,7 +104,7 @@ func TestMongoLoadSave(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		fmt.Println(zz)
+		fmt.Println(&zz)
 	}
 }
 func TestDirtyUpdate(t *testing.T) {
@@ -114,8 +114,10 @@ func TestDirtyUpdate(t *testing.T) {
 		col := mongo_helper.GetCol("test", "model")
 
 		filter := bson.M{"_id": 789}
-		update1 := bson.M{"y.d.100.b": 1022, "y.d.110.a": 1111}
-		v, err := col.UpdateOne(context.TODO(), filter, bson.M{"$set": update1}, options.Update().SetUpsert(true))
+		update1 := bson.M{"y.d.100.b": 10222}
+		update2 := bson.M{"y.d.110.a": ""}
+
+		v, err := col.UpdateOne(context.TODO(), filter, bson.M{"$set": update1, "$unset": update2}, options.Update().SetUpsert(true))
 		if err != nil {
 			t.Error(err)
 		}
@@ -125,6 +127,6 @@ func TestDirtyUpdate(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		fmt.Println(zz)
+		fmt.Println(&zz)
 	}
 }

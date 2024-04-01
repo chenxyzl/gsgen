@@ -113,26 +113,28 @@ func (s *MMap[K, V]) IsDirty() bool {
 }
 
 // CleanDirty 清楚脏标记
-func (s *MMap[K, V]) CleanDirty() {
+func (s *MMap[K, V]) CleanDirty(withChildren bool) {
 	if s == nil {
 		return
 	}
-	if s.dirtyAll {
-		var v V
-		if _, ok := (any(v)).(IDirtyModel); ok {
-			s.Range(func(k K, v V) bool {
-				(any(v)).(IDirtyModel).CleanDirty()
-				return true
-			})
-		}
-	} else {
-		var v V
-		if _, ok := (any(v)).(IDirtyModel); ok {
-			for nk := range s.dirty {
-				(any(s.Get(nk))).(IDirtyModel).CleanDirty()
+	if withChildren {
+		if s.dirtyAll {
+			var v V
+			if _, ok := (any(v)).(IDirtyModel); ok {
+				s.Range(func(k K, v V) bool {
+					(any(v)).(IDirtyModel).CleanDirty(withChildren)
+					return true
+				})
 			}
-		}
+		} else {
+			var v V
+			if _, ok := (any(v)).(IDirtyModel); ok {
+				for nk := range s.dirty {
+					(any(s.Get(nk))).(IDirtyModel).CleanDirty(withChildren)
+				}
+			}
 
+		}
 	}
 	s.dirtyAll = false
 	clear(s.dirty)
@@ -203,4 +205,20 @@ func (s *MMap[K, V]) UnmarshalBSON(data []byte) error {
 		s.Set(k, v)
 	}
 	return nil
+}
+
+// BuildDirty bson的增量更新
+func (s *MMap[K, V]) BuildDirty(m bson.M, preKey string) {
+	if len(s.dirty) == 0 && !s.dirtyAll {
+		return
+	}
+	if s.dirtyAll {
+		AddSetDirtyM(m, preKey, s)
+	} else {
+		for k, v := range s.dirty {
+			AddSetDirtyM(m, MakeBsonKey(fmt.Sprintf("%v", k), preKey), v)
+		}
+	}
+	s.CleanDirty(false)
+	return
 }
