@@ -360,7 +360,7 @@ func generateClean(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 		cleanStructBody = append(cleanStructBody, &ast.IfStmt{ //field设置自己的dirtyIdx
 			Cond: &ast.BinaryExpr{
 				X:  &ast.Ident{Name: "s." + name},
-				Op: token.EQL,
+				Op: token.NEQ,
 				Y:  &ast.Ident{Name: "nil"},
 			},
 			Body: &ast.BlockStmt{
