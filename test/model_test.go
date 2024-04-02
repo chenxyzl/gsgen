@@ -125,7 +125,6 @@ func TestMongoLoadSave(t *testing.T) {
 		mongo_helper.Connect(mongoUrl)
 		defer mongo_helper.Close()
 		col := mongo_helper.GetCol("test", "model")
-
 		filter := bson.M{"_id": c.GetId()}
 		_, err := col.ReplaceOne(context.TODO(), filter, c, options.Replace().SetUpsert(true))
 		if err != nil {
@@ -140,15 +139,13 @@ func TestMongoLoadSave(t *testing.T) {
 	}
 }
 func TestUpdate(t *testing.T) {
+	filter := bson.M{"_id": 123}
+	update1 := bson.M{"a": "c_a_new", "b.bb.ccc": "1103", "d.c_d.aa": "1027", "d.c_d.bb.bbb": 1029}
+	update2 := bson.M{"b.aa": ""}
 	if mongoUrl != "" {
 		mongo_helper.Connect(mongoUrl)
 		defer mongo_helper.Close()
 		col := mongo_helper.GetCol("test", "model")
-
-		filter := bson.M{"_id": 123}
-		update1 := bson.M{"a": "c_a_new", "b.bb.ccc": "1103", "d.c_d.aa": "1027", "d.c_d.bb.bbb": 1029}
-		update2 := bson.M{"b.aa": ""}
-
 		v, err := col.UpdateOne(context.TODO(), filter, bson.M{"$set": update1, "$unset": update2}, options.Update().SetUpsert(true))
 		if err != nil {
 			t.Error(err)
@@ -163,20 +160,23 @@ func TestUpdate(t *testing.T) {
 	}
 }
 func TestBuildDirty(t *testing.T) {
+	filter := bson.M{"_id": 123}
+	c := getTestC(123)
+	m := bson.M{}
+	c.BuildDirty(m, "")
+	m1 := bson.M{}
+	c.BuildDirty(m1, "")
+	if len(m1) != 0 {
+		t.Error("build需要清空dirty")
+	}
+	c.GetB().GetCc().Get(1).SetId(120)
+	c.GetB().GetCc().Get(1).SetAaa(121)
+	c.BuildDirty(m, "")
+	fmt.Printf("n3:%+v\n", m1)
 	if mongoUrl != "" {
 		mongo_helper.Connect(mongoUrl)
 		defer mongo_helper.Close()
 		col := mongo_helper.GetCol("test", "model")
-
-		filter := bson.M{"_id": 123}
-		c := getTestC(123)
-		m := bson.M{}
-		c.BuildDirty(m, "")
-		m1 := bson.M{}
-		c.BuildDirty(m1, "")
-		if len(m1) != 0 {
-			t.Error("build需要清空dirty")
-		}
 		v, err := col.UpdateOne(context.TODO(), filter, m, options.Update().SetUpsert(true))
 		if err != nil {
 			t.Error(err)
