@@ -332,6 +332,15 @@ func genBuildDirty(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 	}
 	//setter
 	f.Body.List = append(f.Body.List, dirtyList...)
+	f.Body.List = append(f.Body.List, &ast.ExprStmt{
+		X: &ast.CallExpr{
+			Fun: &ast.SelectorExpr{
+				X:   ast.NewIdent("s"),
+				Sel: ast.NewIdent("CleanDirty"),
+			},
+			Args: []ast.Expr{ast.NewIdent("false")},
+		},
+	})
 	//return
 	f.Body.List = append(f.Body.List, &ast.ReturnStmt{
 		Results: []ast.Expr{},

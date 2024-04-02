@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-var mongoUrl = "mongodb+srv://ichenzhl:Qwert321@cluster0.feqwf3z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0" //todo 换成自己的mongo地址测试
+var mongoUrl = "" //todo 换成自己的mongo地址测试
 
 func getTestC(id uint64) *model.TestC {
 	c := &model.TestC{}
@@ -139,7 +139,7 @@ func TestMongoLoadSave(t *testing.T) {
 		fmt.Printf("n3:%+v\n", &zz)
 	}
 }
-func TestDirtyUpdate(t *testing.T) {
+func TestUpdate(t *testing.T) {
 	if mongoUrl != "" {
 		mongo_helper.Connect(mongoUrl)
 		defer mongo_helper.Close()
@@ -172,6 +172,11 @@ func TestBuildDirty(t *testing.T) {
 		c := getTestC(123)
 		m := bson.M{}
 		c.BuildDirty(m, "")
+		m1 := bson.M{}
+		c.BuildDirty(m1, "")
+		if len(m1) != 0 {
+			t.Error("build需要清空dirty")
+		}
 		v, err := col.UpdateOne(context.TODO(), filter, m, options.Update().SetUpsert(true))
 		if err != nil {
 			t.Error(err)

@@ -215,8 +215,8 @@ func (s *MMap[K, V]) BuildDirty(m bson.M, preKey string) {
 	if s.dirtyAll {
 		AddSetDirtyM(m, preKey, s)
 	} else {
-		for k, v := range s.dirty {
-			AddSetDirtyM(m, MakeBsonKey(fmt.Sprintf("%v", k), preKey), v)
+		for k := range s.dirty {
+			AddSetDirtyM(m, MakeBsonKey(fmt.Sprintf("%v", k), preKey), s.data[k])
 		}
 	}
 	s.CleanDirty(false)

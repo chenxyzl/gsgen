@@ -222,8 +222,8 @@ func (s *MList[T]) BuildDirty(m bson.M, preKey string) {
 	if s.dirtyAll {
 		AddSetDirtyM(m, preKey, s)
 	} else {
-		for idx, v := range s.dirty {
-			AddSetDirtyM(m, MakeBsonKey(fmt.Sprintf("%d", idx), preKey), v)
+		for idx := range s.dirty {
+			AddSetDirtyM(m, MakeBsonKey(fmt.Sprintf("%d", idx), preKey), s.data[idx])
 		}
 	}
 	s.CleanDirty(false)
