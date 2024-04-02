@@ -34,8 +34,8 @@ func (s *MList[T]) Len() int {
 	return len(s.data)
 }
 
-// Reset 重置清空list
-func (s *MList[T]) Reset() {
+// Clean 重置清空list
+func (s *MList[T]) Clean() {
 	if s == nil {
 		return
 	}

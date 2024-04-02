@@ -37,8 +37,8 @@ func (s *MMap[K, V]) Len() int {
 	return len(s.data)
 }
 
-// Reset 重置清空list
-func (s *MMap[K, V]) Reset() {
+// Clean 重置清空list
+func (s *MMap[K, V]) Clean() {
 	if s == nil {
 		return
 	}
