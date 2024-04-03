@@ -7,11 +7,10 @@ import (
 )
 
 // generateBson 生成bson的marshal/unmarshal方法
-func generateBson(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
+func generateBson(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, needSetter bool) {
 	genBsonMarshal(file, structTypeExpr, fields)
-	genBsonUnmarshal(file, structTypeExpr, fields)
+	genBsonUnmarshal(file, structTypeExpr, fields, needSetter)
 	genBuildDirty(file, structTypeExpr, fields)
-	generateClean(file, structTypeExpr, fields)
 }
 
 // genBsonMarshal bson的marshal
@@ -83,13 +82,13 @@ func genBsonMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fie
 }
 
 // genBsonUnmarshal bson的Unmarshal
-func genBsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
+func genBsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, needSetter bool) {
 	var setList []ast.Stmt
 	for _, field := range fields {
 		name := field.Names[0].Name //已提前检查
 		setList = append(setList, &ast.ExprStmt{
 			X: &ast.CallExpr{
-				Fun:  ast.NewIdent("s." + fieldNameToSetter(name)),
+				Fun:  ast.NewIdent("s." + fieldNameToSetter(name, needSetter)),
 				Args: []ast.Expr{&ast.SelectorExpr{X: ast.NewIdent("doc"), Sel: ast.NewIdent(fieldNameToBigFiled(name))}},
 			},
 		})
@@ -347,78 +346,4 @@ func genBuildDirty(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 	})
 	//all
 	file.Decls = append(file.Decls, f)
-}
-
-// generateClean 生成clean
-func generateClean(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
-	var cleanStructBody []ast.Stmt
-	for _, field := range fields {
-		if isBasicType1(field.Type) {
-			continue
-		}
-		name := field.Names[0].Name                            //已提前检查
-		cleanStructBody = append(cleanStructBody, &ast.IfStmt{ //field设置自己的dirtyIdx
-			Cond: &ast.BinaryExpr{
-				X:  &ast.Ident{Name: "s." + name},
-				Op: token.NEQ,
-				Y:  &ast.Ident{Name: "nil"},
-			},
-			Body: &ast.BlockStmt{
-				List: []ast.Stmt{
-					&ast.ExprStmt{
-						X: &ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X:   ast.NewIdent("s." + name),
-								Sel: ast.NewIdent("CleanDirty"),
-							},
-							Args: []ast.Expr{ast.NewIdent("withChildren")},
-						},
-					},
-				},
-			},
-		})
-	}
-	//生成clean方法
-	file.Decls = append(file.Decls, &ast.FuncDecl{
-		Name: ast.NewIdent("CleanDirty"),
-		Type: &ast.FuncType{
-			Params: &ast.FieldList{
-				List: []*ast.Field{
-					{
-						Names: []*ast.Ident{ast.NewIdent("withChildren")},
-						Type:  ast.NewIdent("bool"),
-					},
-				},
-			},
-		},
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
-		Body: &ast.BlockStmt{
-			List: append([]ast.Stmt{ //先clean自己
-				&ast.ExprStmt{
-					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("s.DirtyModel"),
-							Sel: ast.NewIdent("CleanDirty"),
-						},
-						Args: []ast.Expr{ast.NewIdent("withChildren")},
-					},
-				},
-			},
-				&ast.IfStmt{
-					Cond: &ast.Ident{Name: "withChildren"},
-					Body: &ast.BlockStmt{
-						List: cleanStructBody, //再clean-field,
-					},
-					Else: nil,
-				},
-			),
-		},
-	})
 }

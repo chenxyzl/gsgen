@@ -1,12 +1,12 @@
 ## gen_tools
-- 用go的ast来生成struct对象的方法列表getter,setter,json.Marshal/Unmarshal,bson.Marshal/Unmarshal,String,clone,支持增量mongo的更新
+- 用go的ast来生成struct对象的方法列表getter,setter,json.Marshal/Unmarshal,bson.Marshal/Unmarshal,String,Clone,Clean,支持增量mongo的更新
 
 ### how to run
 - 编译: go build -o ./gen ../tools/gen/main.go
 - 执行: ./gen -d="../model" -f=".model.go,.mod.go" -s -b
     - -d表示目录
     - -f表示文件后缀
-    - -s表示生成setter
+    - -s表示导出setter[即true:Setter|false:setter]
     - -b表示生成bson的序列化和反序列化
     - 支持的命令参考请执行 ./gen -h
 

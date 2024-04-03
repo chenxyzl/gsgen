@@ -218,8 +218,12 @@ func addImport(genFile *ast.File, imports ...string) {
 }
 
 // fieldNameToSetter 字段名字转Setter方法
-func fieldNameToSetter(fieldName string) string {
-	return "Set" + cases.Title(language.Und).String(fieldName)
+func fieldNameToSetter(fieldName string, needSetter bool) string {
+	if needSetter {
+		return "Set" + cases.Title(language.Und).String(fieldName)
+	} else {
+		return "set" + cases.Title(language.Und).String(fieldName)
+	}
 }
 
 // fieldNameToGetter 字段名字转Getter方法

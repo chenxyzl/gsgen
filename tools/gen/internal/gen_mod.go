@@ -48,7 +48,7 @@ func generateGetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 }
 
 // generateSetters 生成setter
-func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field, idx int) {
+func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field, idx int, needSetter bool) {
 	//经过检测，要么是基本类型的值类型，要么是struct的指针类型，且名字一定为1
 	fieldName := field.Names[0].Name
 	isBaseType := isBasicType1(field.Type)
@@ -129,7 +129,7 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 		})
 	//setter方法体
 	file.Decls = append(file.Decls, &ast.FuncDecl{
-		Name: ast.NewIdent(fieldNameToSetter(fieldName)),
+		Name: ast.NewIdent(fieldNameToSetter(fieldName, needSetter)),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
 				List: []*ast.Field{
@@ -244,13 +244,13 @@ func genJsonMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fie
 }
 
 // genJsonUnmarshal 生成json的Unmarshal
-func genJsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
+func genJsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, needSetter bool) {
 	var setList []ast.Stmt
 	for _, field := range fields {
 		name := field.Names[0].Name //已提前检查
 		setList = append(setList, &ast.ExprStmt{
 			X: &ast.CallExpr{
-				Fun:  ast.NewIdent("s." + fieldNameToSetter(name)),
+				Fun:  ast.NewIdent("s." + fieldNameToSetter(name, needSetter)),
 				Args: []ast.Expr{&ast.SelectorExpr{X: ast.NewIdent("doc"), Sel: ast.NewIdent(fieldNameToBigFiled(name))}},
 			},
 		})
