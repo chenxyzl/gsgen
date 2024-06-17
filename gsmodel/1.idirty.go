@@ -1,26 +1,23 @@
-package mdata
+package gsmodel
 
 import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
-	"math"
 )
-
-const DirtyAll = math.MaxUint64
 
 // test
 type testDirtyModel struct{ DirtyModel }
 
 // check
 var _ IDirtyModel = (*testDirtyModel)(nil)
-var _ IDirtyModel = (*MList[int])(nil)
-var _ IDirtyModel = (*MMap[int, int])(nil)
+var _ IDirtyModel = (*DList[int])(nil)
+var _ IDirtyModel = (*DMap[int, int])(nil)
 
 // IDirtyModel model接口
 type IDirtyModel interface {
 	SetParent(idx any, dirtyParentFunc DirtyParentFunc)
 	IsDirty() bool
-	CleanDirty(withChildren bool)
+	CleanDirty()
 }
 
 // checkSetParent 设置对象的父节点

@@ -12,7 +12,7 @@ import (
 )
 
 // Gen 对外的生成接口
-func Gen(dir string, fileSuffix []string, needSetter bool, needGetter bool) {
+func Gen(dir string, fileSuffix []string, exportSetter bool, exportBson bool) {
 	//读取带处理文件列表
 	targetFiles := readFileList(dir, fileSuffix)
 	if len(targetFiles) == 0 {
@@ -21,7 +21,7 @@ func Gen(dir string, fileSuffix []string, needSetter bool, needGetter bool) {
 	}
 	//开始处理
 	for _, file := range targetFiles {
-		genFile(file, needSetter, needGetter)
+		genFile(file, exportSetter, exportBson)
 	}
 }
 
@@ -57,7 +57,11 @@ func readFileList(dir string, fileSuffix []string) []string {
 }
 
 // genFile 生成文件
-func genFile(sourceFile string, needSetter bool, needBson bool) {
+func genFile(sourceFile string, exportSetter, exportBson bool) {
+	needDirty := false
+	if exportBson {
+		needDirty = true
+	}
 	// 解析源代码
 	fileSet := token.NewFileSet()
 	srcFile, err := parser.ParseFile(fileSet, sourceFile, nil, parser.ParseComments)
@@ -70,7 +74,7 @@ func genFile(sourceFile string, needSetter bool, needBson bool) {
 
 	addImport(genAstFile, "fmt")
 	addImport(genAstFile, "encoding/json")
-	if needBson {
+	if exportBson {
 		addImport(bsonAstFile, "go.mongodb.org/mongo-driver/bson")
 	}
 
@@ -78,7 +82,7 @@ func genFile(sourceFile string, needSetter bool, needBson bool) {
 		if genDecl, genDeclOk := n.(*ast.GenDecl); genDeclOk { //头文件
 			if genDecl.Tok == token.IMPORT {
 				genAstFile.Decls = append(genAstFile.Decls, genDecl)
-				if needBson {
+				if exportBson {
 					bsonAstFile.Decls = append(bsonAstFile.Decls, genDecl)
 				}
 			}
@@ -88,12 +92,12 @@ func genFile(sourceFile string, needSetter bool, needBson bool) {
 				return true
 			}
 			//检查需要生成的Field
-			fields := checkStructField(spec.Name, structType, needBson)
+			fields := checkStructField(spec.Name, structType, needDirty, exportBson)
 			//
-			generate(genAstFile, spec.Name, fields, needSetter)
+			generate(genAstFile, spec.Name, fields, exportSetter, needDirty)
 			//bson 开始生成
-			if needBson {
-				generateBson(bsonAstFile, spec.Name, fields, needSetter)
+			if exportBson {
+				generateBson(bsonAstFile, spec.Name, fields, exportSetter)
 			}
 		}
 		return true
@@ -110,23 +114,26 @@ func genFile(sourceFile string, needSetter bool, needBson bool) {
 		},
 	})
 	//
-	printOutFile(fileSet, genAstFile, strings.TrimSuffix(sourceFile, ".go")+".gen.go")
+	genFileName := strings.TrimSuffix(sourceFile, ".go") + ".gen.go"
+	printOutFile(fileSet, genAstFile, genFileName)
+	fmt.Printf("输出：%v 完成\n", genFileName)
 
-	if needBson {
-		printOutFile(fileSet, bsonAstFile, strings.TrimSuffix(sourceFile, ".go")+".bson.go")
+	if exportBson {
+		bsonFileName := strings.TrimSuffix(sourceFile, ".go") + ".bson.go"
+		printOutFile(fileSet, bsonAstFile, bsonFileName)
+		fmt.Printf("输出：%v 完成\n", bsonFileName)
 	}
 }
 
 // generate 生成全部
-func generate(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, needSetter bool) {
+func generate(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, exportSetter bool, needDirty bool) {
 	for idx, field := range fields {
 		generateGetters(file, structTypeExpr, field)
-		generateSetters(file, structTypeExpr, field, idx, needSetter)
+		generateSetters(file, structTypeExpr, field, idx, exportSetter, needDirty)
 	}
 	genString(file, structTypeExpr, fields)
-	generateClean(file, structTypeExpr, fields)
 	genJsonMarshal(file, structTypeExpr, fields)
-	genJsonUnmarshal(file, structTypeExpr, fields, needSetter)
+	genJsonUnmarshal(file, structTypeExpr, fields, exportSetter)
 	genClone(file, structTypeExpr)
 }
 
@@ -152,7 +159,7 @@ func generateClean(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 								X:   ast.NewIdent("s." + name),
 								Sel: ast.NewIdent("CleanDirty"),
 							},
-							Args: []ast.Expr{ast.NewIdent("withChildren")},
+							Args: []ast.Expr{},
 						},
 					},
 				},
@@ -162,16 +169,7 @@ func generateClean(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 	//生成clean方法
 	file.Decls = append(file.Decls, &ast.FuncDecl{
 		Name: ast.NewIdent("CleanDirty"),
-		Type: &ast.FuncType{
-			Params: &ast.FieldList{
-				List: []*ast.Field{
-					{
-						Names: []*ast.Ident{ast.NewIdent("withChildren")},
-						Type:  ast.NewIdent("bool"),
-					},
-				},
-			},
-		},
+		Type: &ast.FuncType{},
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
 				{
@@ -188,17 +186,11 @@ func generateClean(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 							X:   ast.NewIdent("s.DirtyModel"),
 							Sel: ast.NewIdent("CleanDirty"),
 						},
-						Args: []ast.Expr{ast.NewIdent("withChildren")},
+						Args: []ast.Expr{},
 					},
 				},
 			},
-				&ast.IfStmt{
-					Cond: &ast.Ident{Name: "withChildren"},
-					Body: &ast.BlockStmt{
-						List: cleanStructBody, //再clean-field,
-					},
-					Else: nil,
-				},
+				cleanStructBody...,
 			),
 		},
 	})

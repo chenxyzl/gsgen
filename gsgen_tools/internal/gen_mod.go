@@ -48,15 +48,15 @@ func generateGetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 }
 
 // generateSetters 生成setter
-func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field, idx int, needSetter bool) {
+func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field, idx int, exportSetter bool, needDirty bool) {
 	//经过检测，要么是基本类型的值类型，要么是struct的指针类型，且名字一定为1
 	fieldName := field.Names[0].Name
 	isBaseType := isBasicType1(field.Type)
 	//setter-body
 	var setterBody []ast.Stmt
 	//不是基本类型先设置value的Parent
-	if !isBaseType {
-		setterBody = []ast.Stmt{
+	if needDirty && !isBaseType {
+		setterBody = append(setterBody, []ast.Stmt{
 			&ast.IfStmt{ //field设置自己的dirtyIdx
 				If:   0,
 				Init: nil,
@@ -86,8 +86,9 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 				},
 				Else: nil,
 			},
-		}
+		}...)
 	}
+
 	//其他通用语句
 	setterBody = append(setterBody,
 		&ast.AssignStmt{ //赋值
@@ -101,8 +102,10 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 			Rhs: []ast.Expr{
 				ast.NewIdent("v"),
 			},
-		},
-		&ast.ExprStmt{ //更新当前的dirty
+		})
+	//更新当前dirty
+	if needDirty {
+		setterBody = append(setterBody, &ast.ExprStmt{ //更新当前的dirty
 			X: &ast.CallExpr{
 				Fun: &ast.SelectorExpr{
 					X:   ast.NewIdent("s"),
@@ -127,9 +130,10 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 				},
 			},
 		})
+	}
 	//setter方法体
 	file.Decls = append(file.Decls, &ast.FuncDecl{
-		Name: ast.NewIdent(fieldNameToSetter(fieldName, needSetter)),
+		Name: ast.NewIdent(fieldNameToSetter(fieldName, exportSetter)),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
 				List: []*ast.Field{
@@ -244,13 +248,13 @@ func genJsonMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fie
 }
 
 // genJsonUnmarshal 生成json的Unmarshal
-func genJsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, needSetter bool) {
+func genJsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, exportSetter bool) {
 	var setList []ast.Stmt
 	for _, field := range fields {
 		name := field.Names[0].Name //已提前检查
 		setList = append(setList, &ast.ExprStmt{
 			X: &ast.CallExpr{
-				Fun:  ast.NewIdent("s." + fieldNameToSetter(name, needSetter)),
+				Fun:  ast.NewIdent("s." + fieldNameToSetter(name, exportSetter)),
 				Args: []ast.Expr{&ast.SelectorExpr{X: ast.NewIdent("doc"), Sel: ast.NewIdent(fieldNameToBigFiled(name))}},
 			},
 		})

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/gen_tools.iml" filepath="$PROJECT_DIR$/.idea/gen_tools.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/gsgen.iml" filepath="$PROJECT_DIR$/.idea/gsgen.iml" />
     </modules>
   </component>
 </project>

@@ -1,0 +1,1 @@
+gsgen -d="../example/bson" -f=".model.go,.mod.go" -b

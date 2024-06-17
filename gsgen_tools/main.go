@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"gen/internal"
+	"github.com/chenxyzl/gsgen/gsgen_tools/internal"
 	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"

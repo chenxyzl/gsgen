@@ -1,0 +1,1 @@
+gsgen -d="../example/getter" -f=".model.go,.mod.go"

@@ -1,4 +1,4 @@
-package mdata
+package gsmodel
 
 type DirtyParentFunc func(dirtyIdx any)
 
@@ -33,7 +33,7 @@ func (s *DirtyModel) IsDirty() bool {
 }
 
 // CleanDirty 清除脏标记
-func (s *DirtyModel) CleanDirty(withChildren bool) {
+func (s *DirtyModel) CleanDirty() {
 	if s == nil {
 		return
 	}

@@ -10,7 +10,8 @@ import (
 func generateBson(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, needSetter bool) {
 	genBsonMarshal(file, structTypeExpr, fields)
 	genBsonUnmarshal(file, structTypeExpr, fields, needSetter)
-	genBuildDirty(file, structTypeExpr, fields)
+	genBuildBson(file, structTypeExpr, fields)
+	generateClean(file, structTypeExpr, fields)
 }
 
 // genBsonMarshal bson的marshal
@@ -22,7 +23,7 @@ func genBsonMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fie
 
 	for _, field := range fields {
 		fieldName := field.Names[0].Name //前面已检查
-		bsonTag, ok := getFieldTag(structTypeExpr, field, "bson:")
+		bsonTag, ok := getFieldTag(structTypeExpr.Name, field, "bson:")
 		if !ok {
 			panic(fmt.Sprintf("类型:%v,字段:%v, 未找到tag.bson", structTypeExpr, fieldName))
 		}
@@ -170,12 +171,12 @@ func genBsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.F
 	file.Decls = append(file.Decls, f)
 }
 
-// genBuildDirty bson的增量更新
-func genBuildDirty(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
+// genBuildBson bson的增量更新
+func genBuildBson(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
 	var dirtyList []ast.Stmt
 	for idx, field := range fields {
 		name := field.Names[0].Name //已提前检查
-		bsonTag, ok := getFieldTag(structTypeExpr, field, "bson:")
+		bsonTag, ok := getFieldTag(structTypeExpr.Name, field, "bson:")
 		if !ok {
 			panic(fmt.Sprintf("类型:%v,字段:%v, 未找到tag.bson", structTypeExpr, name))
 		}
@@ -208,11 +209,11 @@ func genBuildDirty(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 		if isBasicType1(field.Type) {
 			dirtyBody.Body.List = append(dirtyBody.Body.List, &ast.ExprStmt{
 				X: &ast.CallExpr{
-					Fun: ast.NewIdent("mdata.AddSetDirtyM"),
+					Fun: ast.NewIdent("gsmodel.AddSetDirtyM"),
 					Args: []ast.Expr{
 						ast.NewIdent("m"),
 						&ast.CallExpr{
-							Fun: ast.NewIdent("mdata.MakeBsonKey"),
+							Fun: ast.NewIdent("gsmodel.MakeBsonKey"),
 							Args: []ast.Expr{
 								&ast.BasicLit{Kind: token.STRING, Value: bsonTag},
 								ast.NewIdent("preKey"),
@@ -233,11 +234,11 @@ func genBuildDirty(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 					List: []ast.Stmt{
 						&ast.ExprStmt{
 							X: &ast.CallExpr{
-								Fun: ast.NewIdent("mdata.AddUnsetDirtyM"),
+								Fun: ast.NewIdent("gsmodel.AddUnsetDirtyM"),
 								Args: []ast.Expr{
 									ast.NewIdent("m"),
 									&ast.CallExpr{
-										Fun: ast.NewIdent("mdata.MakeBsonKey"),
+										Fun: ast.NewIdent("gsmodel.MakeBsonKey"),
 										Args: []ast.Expr{
 											&ast.BasicLit{Kind: token.STRING, Value: bsonTag},
 											ast.NewIdent("preKey"),
@@ -252,11 +253,11 @@ func genBuildDirty(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 					List: []ast.Stmt{
 						&ast.ExprStmt{
 							X: &ast.CallExpr{
-								Fun: ast.NewIdent("s." + name + ".BuildDirty"),
+								Fun: ast.NewIdent("s." + name + ".BuildBson"),
 								Args: []ast.Expr{
 									ast.NewIdent("m"),
 									&ast.CallExpr{
-										Fun: ast.NewIdent("mdata.MakeBsonKey"),
+										Fun: ast.NewIdent("gsmodel.MakeBsonKey"),
 										Args: []ast.Expr{
 											&ast.BasicLit{Kind: token.STRING, Value: bsonTag},
 											ast.NewIdent("preKey"),
@@ -281,7 +282,7 @@ func genBuildDirty(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 				},
 			},
 		},
-		Name: ast.NewIdent("BuildDirty"),
+		Name: ast.NewIdent("BuildBson"),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
 				List: []*ast.Field{
@@ -331,15 +332,6 @@ func genBuildDirty(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fiel
 	}
 	//setter
 	f.Body.List = append(f.Body.List, dirtyList...)
-	f.Body.List = append(f.Body.List, &ast.ExprStmt{
-		X: &ast.CallExpr{
-			Fun: &ast.SelectorExpr{
-				X:   ast.NewIdent("s"),
-				Sel: ast.NewIdent("CleanDirty"),
-			},
-			Args: []ast.Expr{ast.NewIdent("false")},
-		},
-	})
 	//return
 	f.Body.List = append(f.Body.List, &ast.ReturnStmt{
 		Results: []ast.Expr{},
