@@ -7,7 +7,6 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -56,8 +55,11 @@ func readFileList(dir string, fileSuffix []string) []string {
 	return targetFiles
 }
 
+var useGSModelStruct bool
+
 // genFile 生成文件
 func genFile(sourceFile string, exportSetter, exportBson bool) {
+	useGSModelStruct = false
 	needDirty := false
 	if exportBson {
 		needDirty = true
@@ -72,48 +74,50 @@ func genFile(sourceFile string, exportSetter, exportBson bool) {
 	genAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
 	bsonAstFile := &ast.File{Name: srcFile.Name, Decls: []ast.Decl{}}
 
-	addImport(genAstFile, "fmt")
-	addImport(genAstFile, "encoding/json")
-	if exportBson {
-		addImport(bsonAstFile, "go.mongodb.org/mongo-driver/bson")
-	}
-
 	ast.Inspect(srcFile, func(n ast.Node) bool {
-		if genDecl, genDeclOk := n.(*ast.GenDecl); genDeclOk { //头文件
-			if genDecl.Tok == token.IMPORT {
-				genAstFile.Decls = append(genAstFile.Decls, genDecl)
-				if exportBson {
-					bsonAstFile.Decls = append(bsonAstFile.Decls, genDecl)
-				}
-			}
-		} else if spec, specOk := n.(*ast.TypeSpec); specOk { //类型定义
-			structType, structTypeOk := spec.Type.(*ast.StructType)
+		if n == nil {
+			return true
+		}
+		//
+		switch typ := n.(type) {
+		case *ast.GenDecl:
+			//if typ.Tok == token.IMPORT {
+			//	genAstFile.Decls = append(genAstFile.Decls, typ)
+			//	if exportBson {
+			//		bsonAstFile.Decls = append(bsonAstFile.Decls, typ)
+			//	}
+			//}
+		case *ast.TypeSpec:
+			structType, structTypeOk := typ.Type.(*ast.StructType)
 			if !structTypeOk {
 				return true
 			}
 			//检查需要生成的Field
-			fields := checkStructField(spec.Name, structType, needDirty, exportBson)
+			fields := checkStructField(typ.Name, structType, needDirty, exportBson)
 			//
-			generate(genAstFile, spec.Name, fields, exportSetter, needDirty)
+			generate(genAstFile, typ.Name, fields, exportSetter, needDirty)
 			//bson 开始生成
 			if exportBson {
-				generateBson(bsonAstFile, spec.Name, fields, exportSetter)
+				generateBson(bsonAstFile, typ.Name, fields, exportSetter)
 			}
+		case *ast.File, *ast.Ident, *ast.ImportSpec: //ignore
+		default:
+			//panic(fmt.Errorf("文件:%v 不允许有定义model以外的代码(头文件不好处理,解决后可能会放开限制)", srcFile.Name))
 		}
 		return true
 	})
-	genAstFile.Imports = append(genAstFile.Imports, &ast.ImportSpec{
-		Path: &ast.BasicLit{
-			Kind:  token.STRING,
-			Value: strconv.Quote("fmt"),
-		},
-	}, &ast.ImportSpec{
-		Path: &ast.BasicLit{
-			Kind:  token.STRING,
-			Value: strconv.Quote("encoding/json"),
-		},
-	})
-	//
+
+	addImport(genAstFile, "fmt", "encoding/json")
+	if exportBson {
+		addImport(bsonAstFile, "go.mongodb.org/mongo-driver/bson")
+	}
+	if useGSModelStruct {
+		addImport(genAstFile, "github.com/chenxyzl/gsgen/gsmodel")
+		if exportBson {
+			addImport(bsonAstFile, "github.com/chenxyzl/gsgen/gsmodel")
+		}
+	}
+
 	genFileName := strings.TrimSuffix(sourceFile, ".go") + ".gen.go"
 	printOutFile(fileSet, genAstFile, genFileName)
 	fmt.Printf("输出：%v 完成\n", genFileName)
