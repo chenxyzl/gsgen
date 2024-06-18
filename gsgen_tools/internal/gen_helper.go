@@ -81,22 +81,21 @@ func isBasicType1(expr ast.Expr) bool {
 // addImport 增加包名
 func addImport(genFile *ast.File, imports ...string) {
 	// 添加导入语句
-	if len(imports) > 0 {
-		//importSpecs := make([]*ast.ImportSpec, 0, len(imports))
-		importSpecs := make([]ast.Spec, 0, len(imports))
-		for _, importPath := range imports {
-			importSpecs = append(importSpecs, &ast.ImportSpec{
-				Path: &ast.BasicLit{
-					Kind:  token.STRING,
-					Value: strconv.Quote(importPath),
-				},
-			})
-		}
-		genFile.Decls = append(genFile.Decls, &ast.GenDecl{
-			Tok:   token.IMPORT,
-			Specs: importSpecs,
+	if len(imports) <= 0 {
+		return
+	}
+	//importSpecs := make([]*ast.ImportSpec, 0, len(imports))
+	importSpecs := make([]ast.Spec, 0, len(imports))
+	for _, importPath := range imports {
+		importSpecs = append(importSpecs, &ast.ImportSpec{
+			Path: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: strconv.Quote(importPath),
+			},
 		})
 	}
+	var front = []ast.Decl{&ast.GenDecl{Tok: token.IMPORT, Specs: importSpecs}}
+	genFile.Decls = append(front, genFile.Decls...)
 }
 
 // fieldNameToSetter 字段名字转Setter方法
@@ -293,6 +292,7 @@ func mustGSList(parentName, fieldName string, indexExpr *ast.IndexExpr, needDirt
 			panic(fmt.Errorf("类型:%v,字段:%v, 1个泛型参数且非dirty模式下强制认为是gsmodel.AList,当前为:%v", parentName, fieldName, listSelectExpr.Sel.Name))
 		}
 	}
+	useGSModelStruct = true
 	return indexExpr.Index
 }
 
@@ -321,5 +321,6 @@ func mustGSMap(parentName, fieldName string, indexListExpr *ast.IndexListExpr, n
 			panic(fmt.Errorf("类型:%v,字段:%v, 多个泛型参数且非dirty模式下强制认为是gsmodel.AMap,当前为:%v", parentName, fieldName, listSelectExpr.Sel.Name))
 		}
 	}
+	useGSModelStruct = true
 	return indexListExpr.Indices[0], indexListExpr.Indices[1]
 }

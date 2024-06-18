@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/chenxyzl/gsgen/example/nest"
+	"github.com/chenxyzl/gsgen/example/test/mongo_helper"
 	"github.com/chenxyzl/gsgen/gsmodel"
-	"github.com/chenxyzl/gsgen/test/mongo_helper"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"testing"
@@ -166,7 +166,11 @@ func TestBuildBson(t *testing.T) {
 	c.BuildBson(m, "")
 	m1 := bson.M{}
 	c.BuildBson(m1, "")
-	if len(m1) != 0 {
+	//clean测试
+	c.CleanDirty()
+	m2 := bson.M{}
+	c.BuildBson(m2, "")
+	if len(m2) != 0 {
 		t.Error("build需要清空dirty")
 	}
 	c.GetB().GetCc().Get(1).SetId(120)
