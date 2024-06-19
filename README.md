@@ -8,7 +8,4 @@
     - -f表示文件后缀
     - -s表示导出setter[即true:Setter|false:setter]
     - -b表示生成bson的序列化和反序列化
-    - 支持的命令参考请执行 ./gen -h
-
-### 注意
-model定义文件不要有struct以外的其他定义(头文件不好分析,暂时增加个限制)
+    - 支持的命令参考请执行 ./gsgen_tools -h

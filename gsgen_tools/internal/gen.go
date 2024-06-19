@@ -107,15 +107,17 @@ func genFile(sourceFile string, exportSetter, exportBson bool) {
 		return true
 	})
 
-	addImport(genAstFile, "fmt", "encoding/json")
-	if exportBson {
-		addImport(bsonAstFile, "go.mongodb.org/mongo-driver/bson")
-	}
+	//gen import
+	genImportList := []string{"fmt", "encoding/json"}
 	if useGSModelStruct {
-		addImport(genAstFile, "github.com/chenxyzl/gsgen/gsmodel")
-		if exportBson {
-			addImport(bsonAstFile, "github.com/chenxyzl/gsgen/gsmodel")
-		}
+		genImportList = append(genImportList, "github.com/chenxyzl/gsgen/gsmodel")
+	}
+	addImport(genAstFile, genImportList...)
+
+	//bson import
+	if exportBson {
+		bsonImportLIst := []string{"go.mongodb.org/mongo-driver/bson", "github.com/chenxyzl/gsgen/gsmodel"}
+		addImport(bsonAstFile, bsonImportLIst...)
 	}
 
 	genFileName := strings.TrimSuffix(sourceFile, ".go") + ".gen.go"

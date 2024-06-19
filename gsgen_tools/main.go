@@ -18,11 +18,7 @@ func main() {
 			if err != nil {
 				panic(fmt.Sprintf("param parse err: dir, err:%v", err))
 			}
-			currentDir, err := os.Getwd()
-			if err != nil {
-				panic(err)
-			}
-			fullDir := filepath.Clean(filepath.Join(currentDir, dir))
+			dir = filepath.Clean(dir)
 
 			//parse setter
 			fileSuffix, err := cmd.Flags().GetStringSlice("file_suffix")
@@ -43,9 +39,9 @@ func main() {
 			}
 
 			//
-			fmt.Printf("dir: %v\nfile suffix: %v\ngen getter: true[must]\ngen setter: %v\ngen bson:%v \n", fullDir, fileSuffix, genSetter, genBson)
+			fmt.Printf("dir: %v\nfile suffix: %v\ngen getter: true[must]\ngen setter: %v\ngen bson:%v \n", dir, fileSuffix, genSetter, genBson)
 			//
-			internal.Gen(fullDir, fileSuffix, genSetter, genBson)
+			internal.Gen(dir, fileSuffix, genSetter, genBson)
 		},
 	}
 	//增加默认命令
