@@ -11,7 +11,7 @@ import (
 )
 
 // Gen 对外的生成接口
-func Gen(dir string, fileSuffix []string, exportSetter bool, exportBson bool, headAnnotations []string) {
+func Gen(dir string, fileSuffix []string, exportSetter bool, exportBson bool, headAnnotations []string, ignoreCheckIdents []string) {
 	//读取带处理文件列表
 	targetFiles := readFileList(dir, fileSuffix)
 	if len(targetFiles) == 0 {
@@ -20,7 +20,7 @@ func Gen(dir string, fileSuffix []string, exportSetter bool, exportBson bool, he
 	}
 	//开始处理
 	for _, file := range targetFiles {
-		genFile(file, exportSetter, exportBson, headAnnotations)
+		genFile(file, exportSetter, exportBson, headAnnotations, ignoreCheckIdents)
 	}
 }
 
@@ -55,12 +55,14 @@ func readFileList(dir string, fileSuffix []string) []string {
 	return targetFiles
 }
 
-var useGSModelStruct bool
+var usedGSModelStruct bool
+var usedIgnoreCheckPackage []string
 
 // genFile 生成文件
-func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations []string) {
-	useGSModelStruct = false
+func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations []string, ignoreCheckIdents []string) {
+	usedGSModelStruct = false
 	needDirty := false
+	usedIgnoreCheckPackage = nil
 	if exportBson {
 		needDirty = true
 	}
@@ -93,7 +95,7 @@ func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations [
 				return true
 			}
 			//检查需要生成的Field
-			fields := checkStructField(typ.Name, structType, needDirty, exportBson)
+			fields := checkStructField(typ.Name, structType, needDirty, exportBson, ignoreCheckIdents)
 			//
 			generate(genAstFile, typ.Name, fields, exportSetter, needDirty)
 			//bson 开始生成
@@ -109,14 +111,19 @@ func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations [
 
 	//gen import
 	genImportList := []string{"fmt", "encoding/json"}
-	if useGSModelStruct {
+	genImportList = append(genImportList, usedIgnoreCheckPackage...)
+	if usedGSModelStruct {
 		genImportList = append(genImportList, "github.com/chenxyzl/gsgen/gsmodel")
 	}
 	addImport(genAstFile, genImportList...)
 
 	//bson import
 	if exportBson {
-		bsonImportLIst := []string{"go.mongodb.org/mongo-driver/bson", "github.com/chenxyzl/gsgen/gsmodel"}
+		bsonImportLIst := []string{"go.mongodb.org/mongo-driver/bson"}
+		bsonImportLIst = append(bsonImportLIst, usedIgnoreCheckPackage...)
+		if usedGSModelStruct {
+			bsonImportLIst = append(bsonImportLIst, "github.com/chenxyzl/gsgen/gsmodel")
+		}
 		addImport(bsonAstFile, bsonImportLIst...)
 	}
 

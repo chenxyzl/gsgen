@@ -43,19 +43,24 @@ func main() {
 			if err != nil {
 				panic(fmt.Sprintf("param parse err: head_ext_annotation, err:%v", err))
 			}
-
+			//parse head ext annotation
+			ignoreCheckIdents, err := cmd.Flags().GetStringSlice("ignore_check_idents")
+			if err != nil {
+				panic(fmt.Sprintf("param parse err: head_ext_annotation, err:%v", err))
+			}
 			//
 			fmt.Printf("dir: %v\nfile suffix: %v\ngen getter: true[must]\ngen setter: %v\ngen bson:%v \n", dir, fileSuffix, genSetter, genBson)
 			//
-			internal.Gen(dir, fileSuffix, genSetter, genBson, headAnnotations)
+			internal.Gen(dir, fileSuffix, genSetter, genBson, headAnnotations, ignoreCheckIdents)
 		},
 	}
 	//增加默认命令
-	rootCmd.Flags().StringP("dir", "d", "model", "target dir")
-	rootCmd.Flags().StringSliceP("file_suffix", "f", []string{".model.go"}, "target file suffix")
-	rootCmd.Flags().BoolP("setter", "s", false, "gen setter")
-	rootCmd.Flags().BoolP("bson", "b", false, "gen bson")
-	rootCmd.Flags().StringSliceP("head_annotations", "a", []string{}, "head annotations")
+	rootCmd.Flags().StringP("dir", "d", "model", "目标目录")
+	rootCmd.Flags().StringSliceP("file_suffix", "f", []string{".model.go"}, "文件名后缀")
+	rootCmd.Flags().BoolP("setter", "s", false, "是否导出setter")
+	rootCmd.Flags().BoolP("bson", "b", false, "是否生成bson")
+	rootCmd.Flags().StringSliceP("head_annotations", "a", []string{}, "头文件的注释,追到到尾部")
+	rootCmd.Flags().StringSliceP("ignore_check_idents", "i", []string{}, "忽略检查的外部包和变量,如:common.Item")
 
 	// 添加命令
 	rootCmd.AddCommand(versionCmd())

@@ -13,7 +13,7 @@ type DList[T any] struct {
 	dirty            map[uint64]bool
 	dirtyAll         bool
 	inParentDirtyIdx any
-	dirtyParent      DirtyParentFunc
+	dirtyParent      dirtyParentFunc
 }
 
 func NewDList[T any]() *DList[T] {
@@ -113,7 +113,7 @@ func (s *DList[T]) Range(f func(idx int, v T) bool) {
 }
 
 // SetParent 设置父节点
-func (s *DList[T]) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
+func (s *DList[T]) SetParent(idx any, dirtyParentFunc dirtyParentFunc) {
 	if s == nil {
 		return
 	}
@@ -136,9 +136,9 @@ func (s *DList[T]) CleanDirty() {
 	}
 	if s.dirtyAll {
 		var v T
-		if _, ok := (any(v)).(IDirtyModel); ok {
+		if _, ok := (any(v)).(iDirtyModel); ok {
 			s.Range(func(idx int, v T) bool {
-				(any(v)).(IDirtyModel).CleanDirty()
+				(any(v)).(iDirtyModel).CleanDirty()
 				return true
 			})
 		}
@@ -146,7 +146,7 @@ func (s *DList[T]) CleanDirty() {
 		l := s.Len()
 		for idx, dirty := range s.dirty {
 			if dirty && int(idx) < l {
-				(any(s.Get(int(idx)))).(IDirtyModel).CleanDirty()
+				(any(s.Get(int(idx)))).(iDirtyModel).CleanDirty()
 			}
 		}
 	}

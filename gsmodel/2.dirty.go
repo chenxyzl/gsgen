@@ -1,8 +1,8 @@
 package gsmodel
 
-type DirtyParentFunc func(dirtyIdx any)
+type dirtyParentFunc func(dirtyIdx any)
 
-func (f DirtyParentFunc) Invoke(dirtyIdx any) {
+func (f dirtyParentFunc) Invoke(dirtyIdx any) {
 	if f != nil {
 		f(dirtyIdx)
 	}
@@ -12,11 +12,11 @@ func (f DirtyParentFunc) Invoke(dirtyIdx any) {
 type DirtyModel struct {
 	dirty            uint64
 	inParentDirtyIdx any
-	dirtyParent      DirtyParentFunc
+	dirtyParent      dirtyParentFunc
 }
 
 // SetParent 设置父节点
-func (s *DirtyModel) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
+func (s *DirtyModel) SetParent(idx any, dirtyParentFunc dirtyParentFunc) {
 	if s == nil {
 		return
 	}

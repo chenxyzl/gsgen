@@ -1,6 +1,8 @@
 package getter
 
-import "github.com/chenxyzl/gsgen/gsmodel"
+import (
+	"github.com/chenxyzl/gsgen/gsmodel"
+)
 
 type TestA struct {
 	cc *gsmodel.AList[int]           `bson:"cc"`

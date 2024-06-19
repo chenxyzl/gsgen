@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"go/token"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -19,7 +20,7 @@ const bsonIgnoreTag = "`bson:\"-\"`"
 const maxFieldCount = 63
 
 // checkStructField 检查是否合法的filed字段
-func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, needDirty, withBson bool) []*ast.Field {
+func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, needDirty, withBson bool, ignoreCheckIdents []string) []*ast.Field {
 	//定义检查
 	out := checkStructFieldBase(structNameIdent.Name, structType, needDirty, withBson)
 	if len(out) > maxFieldCount {
@@ -27,7 +28,7 @@ func checkStructField(structNameIdent *ast.Ident, structType *ast.StructType, ne
 	}
 	//类型检查
 	for _, field := range out {
-		checkFiledTypeLegal(structNameIdent.Name, field.Names[0].Name, field.Type, needDirty)
+		checkFiledTypeLegal(structNameIdent.Name, field.Names[0].Name, field.Type, needDirty, ignoreCheckIdents)
 	}
 
 	return out
@@ -70,6 +71,23 @@ func isBasicType(typeStr string) bool {
 	return false
 }
 
+func isIgnoreSelectorExpr(typ *ast.SelectorExpr, ignoreCheckIdents []string) (bool, string) {
+	ident, ok := typ.X.(*ast.Ident)
+	if !ok {
+		return false, ""
+	}
+	suffix := "." + typ.Sel.Name
+	name := ident.Name + suffix
+
+	for _, s := range ignoreCheckIdents {
+		if strings.HasSuffix(s, name) {
+			return true, strings.TrimSuffix(s, suffix)
+		}
+	}
+
+	return false, ""
+}
+
 // isBasicType1 根据类型是否基本类型
 func isBasicType1(expr ast.Expr) bool {
 	if ident, identOk := expr.(*ast.Ident); identOk {
@@ -84,7 +102,7 @@ func addImport(genFile *ast.File, imports ...string) {
 	if len(imports) <= 0 {
 		return
 	}
-	//importSpecs := make([]*ast.ImportSpec, 0, len(imports))
+	slices.Sort(imports)
 	importSpecs := make([]ast.Spec, 0, len(imports))
 	for _, importPath := range imports {
 		importSpecs = append(importSpecs, &ast.ImportSpec{
@@ -232,7 +250,7 @@ func checkStructFieldBase(structName string, structType *ast.StructType, needDir
 }
 
 // checkFiledTypeLegal 检查类型是否合法
-func checkFiledTypeLegal(structName string, fieldName string, fieldType ast.Expr, needDirty bool) {
+func checkFiledTypeLegal(structName string, fieldName string, fieldType ast.Expr, needDirty bool, ignoreCheckIdents []string) {
 	switch typ := fieldType.(type) {
 	case *ast.Ident:
 		if !isBasicType(typ.Name) {
@@ -243,14 +261,14 @@ func checkFiledTypeLegal(structName string, fieldName string, fieldType ast.Expr
 	case *ast.MapType:
 		panic(fmt.Sprintf("类型:%v,字段:%v, dirty改为gsmodel.DMap,非dirty改为gsmodoel.AMap【注:需要指针类型】", structName, fieldName))
 	case *ast.StarExpr: //只能是包内的类型或gsmodel.DirtyModel/AList/DList/AMap/DMap
-		checkFieldTypeLegalInStar(structName, fieldName, typ.X, needDirty)
+		checkFieldTypeLegalInStar(structName, fieldName, typ.X, needDirty, ignoreCheckIdents)
 	default:
-		panic(fmt.Sprintf("类型:%v,字段:%v, 类型不可用", structName, fieldName))
+		panic(fmt.Sprintf("类型:%v,字段:%v, 类型不可用,必须是基本类型或指针类型", structName, fieldName))
 	}
 }
 
 // checkFieldTypeLegalInStar 检查*指向的类型是否合法
-func checkFieldTypeLegalInStar(structName string, fieldName string, fieldType ast.Expr, needDirty bool) {
+func checkFieldTypeLegalInStar(structName string, fieldName string, fieldType ast.Expr, needDirty bool, ignoreCheckIdents []string) {
 	switch typ := fieldType.(type) {
 	case *ast.Ident:
 	case *ast.ArrayType:
@@ -261,11 +279,19 @@ func checkFieldTypeLegalInStar(structName string, fieldName string, fieldType as
 		panic(fmt.Sprintf("类型:%v,字段:%v,规范,不要使用**双重指针】", structName, fieldName))
 	case *ast.IndexExpr:
 		genType := mustGSList(structName, fieldName, typ, needDirty)
-		checkFiledTypeLegal(structName, fieldName, genType, needDirty)
+		checkFiledTypeLegal(structName, fieldName, genType, needDirty, ignoreCheckIdents)
 	case *ast.IndexListExpr:
 		genType1, genType2 := mustGSMap(structName, fieldName, typ, needDirty)
-		checkFiledTypeLegal(structName, fieldName, genType1, needDirty)
-		checkFiledTypeLegal(structName, fieldName, genType2, needDirty)
+		checkFiledTypeLegal(structName, fieldName, genType1, needDirty, ignoreCheckIdents)
+		checkFiledTypeLegal(structName, fieldName, genType2, needDirty, ignoreCheckIdents)
+	case *ast.SelectorExpr:
+		b, packageName := isIgnoreSelectorExpr(typ, ignoreCheckIdents)
+		if !b {
+			panic(fmt.Sprintf("类型:%v,字段:%v,不支持的外部类型", structName, fieldName))
+		}
+		if !slices.Contains(usedIgnoreCheckPackage, packageName) {
+			usedIgnoreCheckPackage = append(usedIgnoreCheckPackage, packageName)
+		}
 	default:
 		panic(fmt.Sprintf("类型:%v,字段:%v, 类型不可用", structName, fieldName))
 	}
@@ -293,7 +319,7 @@ func mustGSList(parentName, fieldName string, indexExpr *ast.IndexExpr, needDirt
 			panic(fmt.Errorf("类型:%v,字段:%v, 1个泛型参数且非dirty模式下强制认为是gsmodel.AList,当前为:%v", parentName, fieldName, listSelectExpr.Sel.Name))
 		}
 	}
-	useGSModelStruct = true
+	usedGSModelStruct = true
 	return indexExpr.Index
 }
 
@@ -322,6 +348,6 @@ func mustGSMap(parentName, fieldName string, indexListExpr *ast.IndexListExpr, n
 			panic(fmt.Errorf("类型:%v,字段:%v, 多个泛型参数且非dirty模式下强制认为是gsmodel.AMap,当前为:%v", parentName, fieldName, listSelectExpr.Sel.Name))
 		}
 	}
-	useGSModelStruct = true
+	usedGSModelStruct = true
 	return indexListExpr.Indices[0], indexListExpr.Indices[1]
 }

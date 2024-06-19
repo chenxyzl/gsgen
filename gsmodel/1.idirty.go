@@ -9,20 +9,20 @@ import (
 type testDirtyModel struct{ DirtyModel }
 
 // check
-var _ IDirtyModel = (*testDirtyModel)(nil)
-var _ IDirtyModel = (*DList[int])(nil)
-var _ IDirtyModel = (*DMap[int, int])(nil)
+var _ iDirtyModel = (*testDirtyModel)(nil)
+var _ iDirtyModel = (*DList[int])(nil)
+var _ iDirtyModel = (*DMap[int, int])(nil)
 
-// IDirtyModel model接口
-type IDirtyModel interface {
-	SetParent(idx any, dirtyParentFunc DirtyParentFunc)
+// iDirtyModel model接口
+type iDirtyModel interface {
+	SetParent(idx any, dirtyParentFunc dirtyParentFunc)
 	IsDirty() bool
 	CleanDirty()
 }
 
 // checkSetParent 设置对象的父节点
-func checkSetParent(v any, idx any, dirtyParentFunc DirtyParentFunc) {
-	if dirty, ok := v.(IDirtyModel); ok {
+func checkSetParent(v any, idx any, dirtyParentFunc dirtyParentFunc) {
+	if dirty, ok := v.(iDirtyModel); ok {
 		dirty.SetParent(idx, dirtyParentFunc)
 	}
 }

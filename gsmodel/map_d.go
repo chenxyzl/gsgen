@@ -16,7 +16,7 @@ type DMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 
 	dirty            map[K]bool
 	dirtyAll         bool
 	inParentDirtyIdx any
-	dirtyParent      DirtyParentFunc
+	dirtyParent      dirtyParentFunc
 }
 
 func NewDMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64 | string, V any]() *DMap[K, V] {
@@ -93,7 +93,7 @@ func (s *DMap[K, V]) Range(f func(K, V) bool) {
 }
 
 // SetParent 设置父节点
-func (s *DMap[K, V]) SetParent(idx any, dirtyParentFunc DirtyParentFunc) {
+func (s *DMap[K, V]) SetParent(idx any, dirtyParentFunc dirtyParentFunc) {
 	if s == nil {
 		return
 	}
@@ -119,17 +119,17 @@ func (s *DMap[K, V]) CleanDirty() {
 	}
 	if s.dirtyAll {
 		var v V
-		if _, ok := (any(v)).(IDirtyModel); ok {
+		if _, ok := (any(v)).(iDirtyModel); ok {
 			s.Range(func(k K, v V) bool {
-				(any(v)).(IDirtyModel).CleanDirty()
+				(any(v)).(iDirtyModel).CleanDirty()
 				return true
 			})
 		}
 	} else {
 		var v V
-		if _, ok := (any(v)).(IDirtyModel); ok {
+		if _, ok := (any(v)).(iDirtyModel); ok {
 			for nk := range s.dirty {
-				(any(s.Get(nk))).(IDirtyModel).CleanDirty()
+				(any(s.Get(nk))).(iDirtyModel).CleanDirty()
 			}
 		}
 
