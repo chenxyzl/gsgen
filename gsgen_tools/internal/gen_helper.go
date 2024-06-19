@@ -80,9 +80,17 @@ func isIgnoreSelectorExpr(typ *ast.SelectorExpr, ignoreCheckIdents []string) (bo
 	name := ident.Name + suffix
 
 	for _, s := range ignoreCheckIdents {
-		if strings.HasSuffix(s, name) {
-			return true, strings.TrimSuffix(s, suffix)
+		//
+		if strings.Contains(s, ".") { //特定包的类型
+			if strings.HasSuffix(s, name) {
+				return true, strings.TrimSuffix(s, suffix)
+			}
+		} else { //特定包
+			if strings.HasSuffix(s, ident.Name) {
+				return true, s
+			}
 		}
+
 	}
 
 	return false, ""
