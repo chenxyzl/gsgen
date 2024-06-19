@@ -55,12 +55,14 @@ func readFileList(dir string, fileSuffix []string) []string {
 	return targetFiles
 }
 
-var usedGSModelStruct bool
+var typeUsedGSType bool
+var bsonUsedGsModel bool
 var usedIgnoreCheckPackage []string
 
 // genFile 生成文件
 func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations []string, ignoreCheckIdents []string) {
-	usedGSModelStruct = false
+	typeUsedGSType = false
+	bsonUsedGsModel = false
 	needDirty := false
 	usedIgnoreCheckPackage = nil
 	if exportBson {
@@ -100,6 +102,9 @@ func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations [
 			generate(genAstFile, typ.Name, fields, exportSetter, needDirty)
 			//bson 开始生成
 			if exportBson {
+				if len(fields) > 0 {
+					bsonUsedGsModel = true
+				}
 				generateBson(bsonAstFile, typ.Name, fields, exportSetter)
 			}
 		case *ast.File, *ast.Ident, *ast.ImportSpec: //ignore
@@ -112,7 +117,7 @@ func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations [
 	//gen import
 	genImportList := []string{"fmt", "encoding/json"}
 	genImportList = append(genImportList, usedIgnoreCheckPackage...)
-	if usedGSModelStruct {
+	if typeUsedGSType {
 		genImportList = append(genImportList, "github.com/chenxyzl/gsgen/gsmodel")
 	}
 	addImport(genAstFile, genImportList...)
@@ -121,7 +126,7 @@ func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations [
 	if exportBson {
 		bsonImportLIst := []string{"go.mongodb.org/mongo-driver/bson"}
 		bsonImportLIst = append(bsonImportLIst, usedIgnoreCheckPackage...)
-		if usedGSModelStruct {
+		if bsonUsedGsModel {
 			bsonImportLIst = append(bsonImportLIst, "github.com/chenxyzl/gsgen/gsmodel")
 		}
 		addImport(bsonAstFile, bsonImportLIst...)

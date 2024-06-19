@@ -327,7 +327,7 @@ func mustGSList(parentName, fieldName string, indexExpr *ast.IndexExpr, needDirt
 			panic(fmt.Errorf("类型:%v,字段:%v, 1个泛型参数且非dirty模式下强制认为是gsmodel.AList,当前为:%v", parentName, fieldName, listSelectExpr.Sel.Name))
 		}
 	}
-	usedGSModelStruct = true
+	typeUsedGSType = true
 	return indexExpr.Index
 }
 
@@ -356,6 +356,6 @@ func mustGSMap(parentName, fieldName string, indexListExpr *ast.IndexListExpr, n
 			panic(fmt.Errorf("类型:%v,字段:%v, 多个泛型参数且非dirty模式下强制认为是gsmodel.AMap,当前为:%v", parentName, fieldName, listSelectExpr.Sel.Name))
 		}
 	}
-	usedGSModelStruct = true
+	typeUsedGSType = true
 	return indexListExpr.Indices[0], indexListExpr.Indices[1]
 }
