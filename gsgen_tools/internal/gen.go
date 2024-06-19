@@ -11,7 +11,7 @@ import (
 )
 
 // Gen 对外的生成接口
-func Gen(dir string, fileSuffix []string, exportSetter bool, exportBson bool) {
+func Gen(dir string, fileSuffix []string, exportSetter bool, exportBson bool, headAnnotations []string) {
 	//读取带处理文件列表
 	targetFiles := readFileList(dir, fileSuffix)
 	if len(targetFiles) == 0 {
@@ -20,7 +20,7 @@ func Gen(dir string, fileSuffix []string, exportSetter bool, exportBson bool) {
 	}
 	//开始处理
 	for _, file := range targetFiles {
-		genFile(file, exportSetter, exportBson)
+		genFile(file, exportSetter, exportBson, headAnnotations)
 	}
 }
 
@@ -58,7 +58,7 @@ func readFileList(dir string, fileSuffix []string) []string {
 var useGSModelStruct bool
 
 // genFile 生成文件
-func genFile(sourceFile string, exportSetter, exportBson bool) {
+func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations []string) {
 	useGSModelStruct = false
 	needDirty := false
 	if exportBson {
@@ -107,24 +107,26 @@ func genFile(sourceFile string, exportSetter, exportBson bool) {
 		return true
 	})
 
-	addImport(genAstFile, "fmt", "encoding/json")
-	if exportBson {
-		addImport(bsonAstFile, "go.mongodb.org/mongo-driver/bson")
-	}
+	//gen import
+	genImportList := []string{"fmt", "encoding/json"}
 	if useGSModelStruct {
-		addImport(genAstFile, "github.com/chenxyzl/gsgen/gsmodel")
-		if exportBson {
-			addImport(bsonAstFile, "github.com/chenxyzl/gsgen/gsmodel")
-		}
+		genImportList = append(genImportList, "github.com/chenxyzl/gsgen/gsmodel")
+	}
+	addImport(genAstFile, genImportList...)
+
+	//bson import
+	if exportBson {
+		bsonImportLIst := []string{"go.mongodb.org/mongo-driver/bson", "github.com/chenxyzl/gsgen/gsmodel"}
+		addImport(bsonAstFile, bsonImportLIst...)
 	}
 
 	genFileName := strings.TrimSuffix(sourceFile, ".go") + ".gen.go"
-	printOutFile(fileSet, genAstFile, genFileName)
+	printOutFile(fileSet, genAstFile, genFileName, headAnnotations)
 	fmt.Printf("输出：%v 完成\n", genFileName)
 
 	if exportBson {
 		bsonFileName := strings.TrimSuffix(sourceFile, ".go") + ".bson.go"
-		printOutFile(fileSet, bsonAstFile, bsonFileName)
+		printOutFile(fileSet, bsonAstFile, bsonFileName, headAnnotations)
 		fmt.Printf("输出：%v 完成\n", bsonFileName)
 	}
 }
