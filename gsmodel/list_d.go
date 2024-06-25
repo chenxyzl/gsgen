@@ -235,3 +235,15 @@ func (s *DList[T]) BuildBson(m bson.M, preKey string) {
 	}
 	return
 }
+
+// ToList to lint
+func (s *DList[T]) ToList() []T {
+	if len(s.data) == 0 {
+		return nil
+	}
+	var ret []T
+	for _, v := range s.data {
+		ret = append(ret, v)
+	}
+	return ret
+}

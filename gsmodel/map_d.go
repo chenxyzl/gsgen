@@ -219,3 +219,15 @@ func (s *DMap[K, V]) BuildBson(m bson.M, preKey string) {
 	}
 	return
 }
+
+// ToMap to map
+func (s *DMap[K, V]) ToMap() map[K]V {
+	if len(s.data) == 0 {
+		return nil
+	}
+	var ret = make(map[K]V)
+	for k, v := range s.data {
+		ret[k] = v
+	}
+	return ret
+}

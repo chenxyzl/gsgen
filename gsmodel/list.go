@@ -139,3 +139,15 @@ func (s *AList[T]) UnmarshalBSON(data []byte) error {
 	}
 	return nil
 }
+
+// ToList to lint
+func (s *AList[T]) ToList() []T {
+	if len(s.data) == 0 {
+		return nil
+	}
+	var ret []T
+	for _, v := range s.data {
+		ret = append(ret, v)
+	}
+	return ret
+}
