@@ -11,9 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 const bsonIgnoreTag = "`bson:\"-\"`"
@@ -124,23 +121,39 @@ func addImport(genFile *ast.File, imports ...string) {
 	genFile.Decls = append(front, genFile.Decls...)
 }
 
+// firstUpper 字符串首字母大写
+func firstUpper(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// firstLower 字符串首字母小写
+func firstLower(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToLower(s[:1]) + s[1:]
+}
+
 // fieldNameToSetter 字段名字转Setter方法
 func fieldNameToSetter(fieldName string, needSetter bool) string {
 	if needSetter {
-		return "Set" + cases.Title(language.Und).String(fieldName)
+		return "Set" + firstUpper(fieldName)
 	} else {
-		return "set" + cases.Title(language.Und).String(fieldName)
+		return "set" + firstUpper(fieldName)
 	}
 }
 
 // fieldNameToGetter 字段名字转Getter方法
 func fieldNameToGetter(fieldName string) string {
-	return "Get" + cases.Title(language.Und).String(fieldName)
+	return "Get" + firstUpper(fieldName)
 }
 
 // fieldNameToBigFiled 字段名字转首字母大写
 func fieldNameToBigFiled(fieldName string) string {
-	return cases.Title(language.Und).String(fieldName)
+	return firstUpper(fieldName)
 }
 
 // buildUnnamedStruct 根据字段生成匿名struct
