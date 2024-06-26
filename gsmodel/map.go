@@ -126,7 +126,7 @@ func (s *AMap[K, V]) UnmarshalBSON(data []byte) error {
 
 // ToMap to map
 func (s *AMap[K, V]) ToMap() map[K]V {
-	if len(s.data) == 0 {
+	if s == nil || len(s.data) == 0 {
 		return nil
 	}
 	var ret = make(map[K]V)

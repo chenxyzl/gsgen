@@ -238,7 +238,7 @@ func (s *DList[T]) BuildBson(m bson.M, preKey string) {
 
 // ToList to lint
 func (s *DList[T]) ToList() []T {
-	if len(s.data) == 0 {
+	if s == nil || len(s.data) == 0 {
 		return nil
 	}
 	var ret []T

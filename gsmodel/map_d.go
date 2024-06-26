@@ -222,7 +222,7 @@ func (s *DMap[K, V]) BuildBson(m bson.M, preKey string) {
 
 // ToMap to map
 func (s *DMap[K, V]) ToMap() map[K]V {
-	if len(s.data) == 0 {
+	if s == nil || len(s.data) == 0 {
 		return nil
 	}
 	var ret = make(map[K]V)

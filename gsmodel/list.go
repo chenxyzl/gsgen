@@ -142,7 +142,7 @@ func (s *AList[T]) UnmarshalBSON(data []byte) error {
 
 // ToList to lint
 func (s *AList[T]) ToList() []T {
-	if len(s.data) == 0 {
+	if s == nil || len(s.data) == 0 {
 		return nil
 	}
 	var ret []T
