@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+const ignoreNameTag = "`in:\"-\"`" //means ignore name, means inherit
 const bsonIgnoreTag = "`bson:\"-\"`"
 const maxFieldCount = 63
 
@@ -223,7 +224,10 @@ func checkStructFieldBase(structName string, structType *ast.StructType, needDir
 	for _, field := range structType.Fields.List {
 		if len(field.Names) > 1 { //每行只能定义1个
 			panic(fmt.Sprintf("类型:%v,每行只能声明1个filed", structName))
-		} else if len(field.Names) == 0 { //匿名类型必须只能是gsmodel.DirtyModel
+		} else if len(field.Names) == 0 { //匿名类型必须配置ignoreNameTag或gsmodel.DirtyModel类型
+			if field.Tag.Value == ignoreNameTag {
+				continue
+			}
 			if !needDirty {
 				panic(fmt.Sprintf("类型:%v, 非dirty模式下不能有匿名类(dirty模式下则匿名字段必须为gsmodel.DirtyModel类型)", structName))
 			}
