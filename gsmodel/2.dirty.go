@@ -29,6 +29,9 @@ func (s *DirtyModel) SetParent(idx any, dirtyParentFunc dirtyParentFunc) {
 
 // IsDirty 是否为脏
 func (s *DirtyModel) IsDirty() bool {
+	if s == nil {
+		return false
+	}
 	return s.dirty > 0
 }
 

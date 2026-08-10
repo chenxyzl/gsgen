@@ -24,14 +24,7 @@ func generateGetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 				},
 			},
 		},
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
+		Recv: recvS(structTypeExpr),
 		Body: &ast.BlockStmt{
 			List: []ast.Stmt{
 				&ast.ReturnStmt{
@@ -60,11 +53,7 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 			&ast.IfStmt{ //field设置自己的dirtyIdx
 				If:   0,
 				Init: nil,
-				Cond: &ast.BinaryExpr{
-					X:  &ast.Ident{Name: "v"},
-					Op: token.NEQ,
-					Y:  &ast.Ident{Name: "nil"},
-				},
+				Cond: notNil("v"),
 				Body: &ast.BlockStmt{
 					List: []ast.Stmt{
 						&ast.ExprStmt{
@@ -144,14 +133,7 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 				},
 			},
 		},
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
+		Recv: recvS(structTypeExpr),
 		Body: &ast.BlockStmt{
 			List: setterBody,
 		},
@@ -161,14 +143,7 @@ func generateSetters(file *ast.File, structTypeExpr *ast.Ident, field *ast.Field
 // genString 生成string方法
 func genString(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
 	file.Decls = append(file.Decls, &ast.FuncDecl{
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
+		Recv: recvS(structTypeExpr),
 		Name: ast.NewIdent("String"),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
@@ -205,14 +180,7 @@ func genString(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
 // genJsonMarshal 生成json的marshal
 func genJsonMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
 	file.Decls = append(file.Decls, &ast.FuncDecl{
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
+		Recv: recvS(structTypeExpr),
 		Name: ast.NewIdent("MarshalJSON"),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
@@ -261,14 +229,7 @@ func genJsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.F
 	}
 
 	f := &ast.FuncDecl{
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
+		Recv: recvS(structTypeExpr),
 		Name: ast.NewIdent("UnmarshalJSON"),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
@@ -305,11 +266,7 @@ func genJsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.F
 							Args: []ast.Expr{ast.NewIdent("data"), &ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("doc")}},
 						}},
 					},
-					Cond: &ast.BinaryExpr{
-						X:  &ast.Ident{Name: "err"},
-						Op: token.NEQ,
-						Y:  &ast.Ident{Name: "nil"}, // nil值
-					},
+					Cond: notNil("err"),
 					Body: &ast.BlockStmt{
 						List: []ast.Stmt{
 							&ast.ReturnStmt{
@@ -336,17 +293,10 @@ func genJsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.F
 	file.Decls = append(file.Decls, f)
 }
 
-// genClone 生成Clone方法,Copy一个一样的返回
+// genClone 生成Clone方法,统一委托给gsmodel.Clone泛型helper
 func genClone(file *ast.File, structTypeExpr *ast.Ident) {
 	file.Decls = append(file.Decls, &ast.FuncDecl{
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
+		Recv: recvS(structTypeExpr),
 		Name: ast.NewIdent("Clone"),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
@@ -361,78 +311,12 @@ func genClone(file *ast.File, structTypeExpr *ast.Ident) {
 		},
 		Body: &ast.BlockStmt{
 			List: []ast.Stmt{
-				&ast.AssignStmt{
-					Lhs: []ast.Expr{&ast.Ident{Name: "data"}, &ast.Ident{Name: "err"}},
-					Tok: token.DEFINE,
-					Rhs: []ast.Expr{
-						&ast.CallExpr{
-							Fun:  ast.NewIdent("json.Marshal"),
-							Args: []ast.Expr{ast.NewIdent("s")},
-						},
-					},
-				},
-				&ast.IfStmt{ //field设置自己的dirtyIdx
-					Cond: &ast.BinaryExpr{
-						X:  &ast.Ident{Name: "err"},
-						Op: token.NEQ,
-						Y:  &ast.Ident{Name: "nil"},
-					},
-					Body: &ast.BlockStmt{
-						List: []ast.Stmt{
-							&ast.ReturnStmt{
-								Results: []ast.Expr{
-									ast.NewIdent("nil"),
-									ast.NewIdent("err"),
-								},
-							},
-						},
-					},
-					Else: nil,
-				},
-				&ast.AssignStmt{
-					Lhs: []ast.Expr{&ast.Ident{Name: "ret"}},
-					Tok: token.DEFINE,
-					Rhs: []ast.Expr{
-						&ast.CompositeLit{
-							Type: structTypeExpr,
-						},
-					},
-				},
-				&ast.AssignStmt{
-					Lhs: []ast.Expr{&ast.Ident{Name: "err"}},
-					Tok: token.ASSIGN,
-					Rhs: []ast.Expr{
-						&ast.CallExpr{
-							Fun: ast.NewIdent("json.Unmarshal"),
-							Args: []ast.Expr{
-								ast.NewIdent("data"),
-								&ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("ret")},
-							},
-						},
-					},
-				},
-				&ast.IfStmt{ //field设置自己的dirtyIdx
-					Cond: &ast.BinaryExpr{
-						X:  &ast.Ident{Name: "err"},
-						Op: token.NEQ,
-						Y:  &ast.Ident{Name: "nil"},
-					},
-					Body: &ast.BlockStmt{
-						List: []ast.Stmt{
-							&ast.ReturnStmt{
-								Results: []ast.Expr{
-									ast.NewIdent("nil"),
-									ast.NewIdent("err"),
-								},
-							},
-						},
-					},
-					Else: nil,
-				},
 				&ast.ReturnStmt{
 					Results: []ast.Expr{
-						&ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("ret")},
-						ast.NewIdent("nil"),
+						&ast.CallExpr{
+							Fun:  ast.NewIdent("gsmodel.Clone"),
+							Args: []ast.Expr{ast.NewIdent("s")},
+						},
 					},
 				},
 			},

@@ -51,7 +51,7 @@ func (s *AList[T]) Get(idx int) T {
 // Set 设置新值
 func (s *AList[T]) Set(idx uint64, v T) {
 	if s == nil {
-		panic("data is nil")
+		panic("AList is nil")
 	}
 	l := uint64(s.Len())
 	if idx >= l {
@@ -63,17 +63,15 @@ func (s *AList[T]) Set(idx uint64, v T) {
 // Append 追加
 func (s *AList[T]) Append(vs ...T) {
 	if s == nil {
-		panic("data is nil")
+		panic("AList is nil")
 	}
-	for _, v := range vs {
-		s.data = append(s.data, v)
-	}
+	s.data = append(s.data, vs...)
 }
 
 // Remove 删除
 func (s *AList[T]) Remove(idx int) {
 	if s == nil {
-		panic("data is nil")
+		panic("AList is nil")
 	}
 	l := s.Len()
 	if idx >= l {
@@ -122,9 +120,8 @@ func (s *AList[T]) UnmarshalJSON(data []byte) error {
 
 // MarshalBSON bson序列化
 func (s *AList[T]) MarshalBSON() ([]byte, error) {
-	r, r1, r2 := bson.MarshalValue(s.data)
-	_ = r
-	return r1, r2
+	_, data, err := bson.MarshalValue(s.data)
+	return data, err
 }
 
 // UnmarshalBSON bson反序列化
@@ -145,9 +142,7 @@ func (s *AList[T]) ToList() []T {
 	if s == nil || len(s.data) == 0 {
 		return nil
 	}
-	var ret []T
-	for _, v := range s.data {
-		ret = append(ret, v)
-	}
+	ret := make([]T, len(s.data))
+	copy(ret, s.data)
 	return ret
 }

@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	"github.com/chenxyzl/gsgen/example/nest"
 	"github.com/chenxyzl/gsgen/example/test/mongo_helper"
 	"github.com/chenxyzl/gsgen/gsmodel"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"testing"
 )
 
 var mongoUrl = "" //todo 换成自己的mongo地址测试

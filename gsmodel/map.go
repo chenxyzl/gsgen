@@ -3,6 +3,8 @@ package gsmodel
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -106,9 +108,8 @@ func (s *AMap[K, V]) UnmarshalJSON(data []byte) error {
 
 // MarshalBSON bson序列化
 func (s *AMap[K, V]) MarshalBSON() ([]byte, error) {
-	r, r1, r2 := bson.MarshalValue(s.data)
-	_ = r
-	return r1, r2
+	_, data, err := bson.MarshalValue(s.data)
+	return data, err
 }
 
 // UnmarshalBSON bson反序列化
@@ -129,9 +130,7 @@ func (s *AMap[K, V]) ToMap() map[K]V {
 	if s == nil || len(s.data) == 0 {
 		return nil
 	}
-	var ret = make(map[K]V)
-	for k, v := range s.data {
-		ret[k] = v
-	}
+	ret := make(map[K]V, len(s.data))
+	maps.Copy(ret, s.data)
 	return ret
 }

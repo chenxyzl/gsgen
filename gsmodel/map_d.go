@@ -3,6 +3,8 @@ package gsmodel
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -13,7 +15,8 @@ import (
 type DMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64 | string, V any] struct {
 	data map[K]V `bson:"map"`
 	//
-	dirty            map[K]bool
+	dirty            map[K]bool //被新增/修改的key,生成$set
+	removed          map[K]bool //被删除的key,生成$unset
 	dirtyAll         bool
 	inParentDirtyIdx any
 	dirtyParent      dirtyParentFunc
@@ -27,6 +30,7 @@ func NewDMap[K int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int
 func (s *DMap[K, V]) init() {
 	s.data = make(map[K]V)
 	s.dirty = make(map[K]bool)
+	s.removed = make(map[K]bool)
 }
 
 // Len 长度
@@ -62,6 +66,7 @@ func (s *DMap[K, V]) Set(k K, v V) {
 	//
 	checkSetParent(v, k, s.updateDirty)
 	s.data[k] = v
+	delete(s.removed, k) //重新赋值,取消删除标记
 	s.updateDirty(k)
 }
 
@@ -74,7 +79,8 @@ func (s *DMap[K, V]) Remove(k K) {
 		return
 	}
 	delete(s.data, k)
-	s.updateDirty(k)
+	delete(s.dirty, k) //取消$set标记
+	s.updateRemoved(k) //标记为$unset
 }
 
 // Range 遍历
@@ -106,36 +112,39 @@ func (s *DMap[K, V]) SetParent(idx any, dirtyParentFunc dirtyParentFunc) {
 
 // IsDirty 是否为脏
 func (s *DMap[K, V]) IsDirty() bool {
-	if s.dirtyAll {
-		return true
+	if s == nil {
+		return false
 	}
-	return len(s.dirty) > 0
+	return s.dirtyAll || len(s.dirty) > 0 || len(s.removed) > 0
 }
 
 // CleanDirty 清楚脏标记
 func (s *DMap[K, V]) CleanDirty() {
-	if s == nil || len(s.data) == 0 {
+	if s == nil {
 		return
 	}
-	if s.dirtyAll {
-		var v V
-		if _, ok := (any(v)).(iDirtyModel); ok {
+	//仅当value本身是脏模型时才需要下钻清理(基本类型的V不实现iDirtyModel)
+	var zero V
+	if _, ok := any(zero).(iDirtyModel); ok {
+		if s.dirtyAll {
 			s.Range(func(k K, v V) bool {
-				(any(v)).(iDirtyModel).CleanDirty()
+				if dm, ok := any(v).(iDirtyModel); ok {
+					dm.CleanDirty()
+				}
 				return true
 			})
-		}
-	} else {
-		var v V
-		if _, ok := (any(v)).(iDirtyModel); ok {
-			for nk := range s.dirty {
-				(any(s.Get(nk))).(iDirtyModel).CleanDirty()
+		} else {
+			for k := range s.dirty {
+				if dm, ok := any(s.data[k]).(iDirtyModel); ok {
+					dm.CleanDirty()
+				}
 			}
 		}
-
 	}
+	//即使data已被清空,也必须复位脏标记,否则BuildBson会重复吐出更新
 	s.dirtyAll = false
 	clear(s.dirty)
+	clear(s.removed)
 }
 
 // updateDirty 更新藏标记
@@ -146,6 +155,17 @@ func (s *DMap[K, V]) updateDirty(tk any) {
 		return
 	}
 	s.dirty[k] = true
+	if s.dirtyParent != nil {
+		s.dirtyParent.Invoke(s.inParentDirtyIdx)
+	}
+}
+
+// updateRemoved 标记key被删除(生成$unset)
+func (s *DMap[K, V]) updateRemoved(k K) {
+	if s.dirtyAll || s.removed[k] {
+		return
+	}
+	s.removed[k] = true
 	if s.dirtyParent != nil {
 		s.dirtyParent.Invoke(s.inParentDirtyIdx)
 	}
@@ -187,9 +207,8 @@ func (s *DMap[K, V]) UnmarshalJSON(data []byte) error {
 
 // MarshalBSON bson序列化
 func (s *DMap[K, V]) MarshalBSON() ([]byte, error) {
-	r, r1, r2 := bson.MarshalValue(s.data)
-	_ = r
-	return r1, r2
+	_, data, err := bson.MarshalValue(s.data)
+	return data, err
 }
 
 // UnmarshalBSON bson反序列化
@@ -207,17 +226,19 @@ func (s *DMap[K, V]) UnmarshalBSON(data []byte) error {
 
 // BuildBson bson的增量更新
 func (s *DMap[K, V]) BuildBson(m bson.M, preKey string) {
-	if len(s.dirty) == 0 && !s.dirtyAll {
+	if len(s.dirty) == 0 && len(s.removed) == 0 && !s.dirtyAll {
 		return
 	}
 	if s.dirtyAll {
 		AddSetDirtyM(m, preKey, s)
-	} else {
-		for k := range s.dirty {
-			AddSetDirtyM(m, MakeBsonKey(fmt.Sprintf("%v", k), preKey), s.data[k])
-		}
+		return
 	}
-	return
+	for k := range s.dirty {
+		AddSetDirtyM(m, MakeBsonKey(fmt.Sprintf("%v", k), preKey), s.data[k])
+	}
+	for k := range s.removed {
+		AddUnsetDirtyM(m, MakeBsonKey(fmt.Sprintf("%v", k), preKey))
+	}
 }
 
 // ToMap to map
@@ -225,9 +246,7 @@ func (s *DMap[K, V]) ToMap() map[K]V {
 	if s == nil || len(s.data) == 0 {
 		return nil
 	}
-	var ret = make(map[K]V)
-	for k, v := range s.data {
-		ret[k] = v
-	}
+	ret := make(map[K]V, len(s.data))
+	maps.Copy(ret, s.data)
 	return ret
 }

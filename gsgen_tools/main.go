@@ -71,7 +71,7 @@ func main() {
 	}
 }
 
-// greetCmd 创建 greet 命令
+// versionCmd 输出可执行文件版本
 func versionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "version",
@@ -81,8 +81,5 @@ func versionCmd() *cobra.Command {
 			fmt.Printf("version:%s\n", internal.Version)
 		},
 	}
-
-	cmd.Flags().String("name", "World", "Name of the person to greet")
-
 	return cmd
 }

@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -31,7 +32,7 @@ func readFileList(dir string, fileSuffix []string) []string {
 		if err != nil {
 			return err
 		}
-		//只读取当前这层目录
+		//递归遍历目录,跳过子目录本身,只处理文件
 		if info.IsDir() {
 			return nil
 		}
@@ -55,16 +56,23 @@ func readFileList(dir string, fileSuffix []string) []string {
 	return targetFiles
 }
 
-var typeUsedGSType bool
-var bsonUsedGsModel bool
-var usedIgnoreCheckPackage []string
+// genContext 单个文件的生成上下文,替代原先的包级可变全局状态,便于并发与测试
+type genContext struct {
+	bsonUsedGsModel        bool     //bson文件是否需要引用gsmodel
+	usedIgnoreCheckPackage []string //被忽略检查的外部包(需要import)
+}
+
+// markIgnorePackage 记录一个需要import的外部包(去重)
+func (c *genContext) markIgnorePackage(pkg string) {
+	if !slices.Contains(c.usedIgnoreCheckPackage, pkg) {
+		c.usedIgnoreCheckPackage = append(c.usedIgnoreCheckPackage, pkg)
+	}
+}
 
 // genFile 生成文件
 func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations []string, ignoreCheckIdents []string) {
-	typeUsedGSType = false
-	bsonUsedGsModel = false
+	ctx := &genContext{}
 	needDirty := false
-	usedIgnoreCheckPackage = nil
 	if exportBson {
 		needDirty = true
 	}
@@ -85,25 +93,19 @@ func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations [
 		//
 		switch typ := n.(type) {
 		case *ast.GenDecl:
-			//if typ.Tok == token.IMPORT {
-			//	genAstFile.Decls = append(genAstFile.Decls, typ)
-			//	if exportBson {
-			//		bsonAstFile.Decls = append(bsonAstFile.Decls, typ)
-			//	}
-			//}
 		case *ast.TypeSpec:
 			structType, structTypeOk := typ.Type.(*ast.StructType)
 			if !structTypeOk {
 				return true
 			}
 			//检查需要生成的Field
-			fields := checkStructField(typ.Name, structType, needDirty, exportBson, ignoreCheckIdents)
+			fields := checkStructField(ctx, typ.Name, structType, needDirty, exportBson, ignoreCheckIdents)
 			//
 			generate(genAstFile, typ.Name, fields, exportSetter, needDirty)
 			//bson 开始生成
 			if exportBson {
 				if len(fields) > 0 {
-					bsonUsedGsModel = true
+					ctx.bsonUsedGsModel = true
 				}
 				generateBson(bsonAstFile, typ.Name, fields, exportSetter)
 			}
@@ -115,18 +117,16 @@ func genFile(sourceFile string, exportSetter, exportBson bool, headAnnotations [
 	})
 
 	//gen import
-	genImportList := []string{"fmt", "encoding/json"}
-	genImportList = append(genImportList, usedIgnoreCheckPackage...)
-	if typeUsedGSType {
-		genImportList = append(genImportList, "github.com/chenxyzl/gsgen/gsmodel")
-	}
+	//gsmodel总是被引用:生成的Clone统一委托给gsmodel.Clone
+	genImportList := []string{"fmt", "encoding/json", "github.com/chenxyzl/gsgen/gsmodel"}
+	genImportList = append(genImportList, ctx.usedIgnoreCheckPackage...)
 	addImport(genAstFile, genImportList...)
 
 	//bson import
 	if exportBson {
 		bsonImportLIst := []string{"go.mongodb.org/mongo-driver/bson"}
-		bsonImportLIst = append(bsonImportLIst, usedIgnoreCheckPackage...)
-		if bsonUsedGsModel {
+		bsonImportLIst = append(bsonImportLIst, ctx.usedIgnoreCheckPackage...)
+		if ctx.bsonUsedGsModel {
 			bsonImportLIst = append(bsonImportLIst, "github.com/chenxyzl/gsgen/gsmodel")
 		}
 		addImport(bsonAstFile, bsonImportLIst...)

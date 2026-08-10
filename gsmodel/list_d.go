@@ -58,7 +58,7 @@ func (s *DList[T]) Get(idx int) T {
 // Set 设置新值
 func (s *DList[T]) Set(idx uint64, v T) {
 	if s == nil {
-		panic("data is nil")
+		panic("DList is nil")
 	}
 	l := uint64(s.Len())
 	if idx >= l {
@@ -73,7 +73,7 @@ func (s *DList[T]) Set(idx uint64, v T) {
 // Append 追加
 func (s *DList[T]) Append(vs ...T) {
 	if s == nil {
-		panic("data is nil")
+		panic("DList is nil")
 	}
 	for _, v := range vs {
 		idx := uint64(s.Len())
@@ -87,7 +87,7 @@ func (s *DList[T]) Append(vs ...T) {
 // Remove 删除 注:因为删除不太好处理list对应的bson的更新,所以这里用了DirtyAll
 func (s *DList[T]) Remove(idx int) {
 	if s == nil {
-		panic("data is nil")
+		panic("DList is nil")
 	}
 	l := s.Len()
 	if idx >= l {
@@ -126,30 +126,40 @@ func (s *DList[T]) SetParent(idx any, dirtyParentFunc dirtyParentFunc) {
 
 // IsDirty 是否为脏
 func (s *DList[T]) IsDirty() bool {
-	return len(s.dirty) > 0
+	if s == nil {
+		return false
+	}
+	return s.dirtyAll || len(s.dirty) > 0
 }
 
 // CleanDirty 清楚脏标记
 func (s *DList[T]) CleanDirty() {
-	if s == nil || len(s.data) == 0 {
+	if s == nil {
 		return
 	}
-	if s.dirtyAll {
-		var v T
-		if _, ok := (any(v)).(iDirtyModel); ok {
+	//仅当元素本身是脏模型时才需要下钻清理(基本类型的T不实现iDirtyModel,不能强转)
+	var zero T
+	if _, ok := any(zero).(iDirtyModel); ok {
+		if s.dirtyAll {
 			s.Range(func(idx int, v T) bool {
-				(any(v)).(iDirtyModel).CleanDirty()
+				if dm, ok := any(v).(iDirtyModel); ok {
+					dm.CleanDirty()
+				}
 				return true
 			})
-		}
-	} else {
-		l := s.Len()
-		for idx, dirty := range s.dirty {
-			if dirty && int(idx) < l {
-				(any(s.Get(int(idx)))).(iDirtyModel).CleanDirty()
+		} else {
+			l := s.Len()
+			for idx := range s.dirty {
+				if int(idx) >= l {
+					continue
+				}
+				if dm, ok := any(s.data[idx]).(iDirtyModel); ok {
+					dm.CleanDirty()
+				}
 			}
 		}
 	}
+	//即使data已被清空,也必须复位脏标记,否则BuildBson会重复吐出更新
 	s.dirtyAll = false
 	clear(s.dirty)
 }
@@ -203,9 +213,8 @@ func (s *DList[T]) UnmarshalJSON(data []byte) error {
 
 // MarshalBSON bson序列化
 func (s *DList[T]) MarshalBSON() ([]byte, error) {
-	r, r1, r2 := bson.MarshalValue(s.data)
-	_ = r
-	return r1, r2
+	_, data, err := bson.MarshalValue(s.data)
+	return data, err
 }
 
 // UnmarshalBSON bson反序列化
@@ -233,7 +242,6 @@ func (s *DList[T]) BuildBson(m bson.M, preKey string) {
 			AddSetDirtyM(m, MakeBsonKey(fmt.Sprintf("%d", idx), preKey), s.data[idx])
 		}
 	}
-	return
 }
 
 // ToList to lint
@@ -241,9 +249,7 @@ func (s *DList[T]) ToList() []T {
 	if s == nil || len(s.data) == 0 {
 		return nil
 	}
-	var ret []T
-	for _, v := range s.data {
-		ret = append(ret, v)
-	}
+	ret := make([]T, len(s.data))
+	copy(ret, s.data)
 	return ret
 }

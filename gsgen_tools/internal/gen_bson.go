@@ -22,8 +22,11 @@ func genBsonMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fie
 	}
 
 	for _, field := range fields {
+		if isBsonIgnored(field) { //bson:"-" 的字段不参与bson序列化
+			continue
+		}
 		fieldName := field.Names[0].Name //前面已检查
-		bsonTag, ok := getFieldTag(structTypeExpr.Name, field, "bson:")
+		bsonTag, ok := getFieldTag(field, "bson")
 		if !ok {
 			panic(fmt.Sprintf("类型:%v,字段:%v, 未找到tag.bson", structTypeExpr, fieldName))
 		}
@@ -35,14 +38,7 @@ func genBsonMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fie
 	}
 
 	f := &ast.FuncDecl{
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
+		Recv: recvS(structTypeExpr),
 		Name: ast.NewIdent("MarshalBSON"),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{},
@@ -84,8 +80,9 @@ func genBsonMarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Fie
 
 // genBsonUnmarshal bson的Unmarshal
 func genBsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field, needSetter bool) {
+	bFields := bsonFields(fields) //排除 bson:"-" 的字段
 	var setList []ast.Stmt
-	for _, field := range fields {
+	for _, field := range bFields {
 		name := field.Names[0].Name //已提前检查
 		setList = append(setList, &ast.ExprStmt{
 			X: &ast.CallExpr{
@@ -96,14 +93,7 @@ func genBsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.F
 	}
 
 	f := &ast.FuncDecl{
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
+		Recv: recvS(structTypeExpr),
 		Name: ast.NewIdent("UnmarshalBSON"),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
@@ -127,7 +117,7 @@ func genBsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.F
 					Tok: token.DEFINE,
 					Rhs: []ast.Expr{
 						&ast.CompositeLit{
-							Type: buildUnnamedStruct(fields),
+							Type: buildUnnamedStruct(bFields),
 						},
 					},
 				},
@@ -140,11 +130,7 @@ func genBsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.F
 							Args: []ast.Expr{ast.NewIdent("data"), &ast.UnaryExpr{Op: token.AND, X: ast.NewIdent("doc")}},
 						}},
 					},
-					Cond: &ast.BinaryExpr{
-						X:  &ast.Ident{Name: "err"},
-						Op: token.NEQ,
-						Y:  &ast.Ident{Name: "nil"}, // nil值
-					},
+					Cond: notNil("err"),
 					Body: &ast.BlockStmt{
 						List: []ast.Stmt{
 							&ast.ReturnStmt{
@@ -175,8 +161,11 @@ func genBsonUnmarshal(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.F
 func genBuildBson(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field) {
 	var dirtyList []ast.Stmt
 	for idx, field := range fields {
+		if isBsonIgnored(field) { //bson:"-" 不参与增量更新;但idx必须保留以对齐脏标记位
+			continue
+		}
 		name := field.Names[0].Name //已提前检查
-		bsonTag, ok := getFieldTag(structTypeExpr.Name, field, "bson:")
+		bsonTag, ok := getFieldTag(field, "bson")
 		if !ok {
 			panic(fmt.Sprintf("类型:%v,字段:%v, 未找到tag.bson", structTypeExpr, name))
 		}
@@ -274,14 +263,7 @@ func genBuildBson(file *ast.File, structTypeExpr *ast.Ident, fields []*ast.Field
 	}
 
 	f := &ast.FuncDecl{
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent("s")},
-					Type:  &ast.StarExpr{X: structTypeExpr},
-				},
-			},
-		},
+		Recv: recvS(structTypeExpr),
 		Name: ast.NewIdent("BuildBson"),
 		Type: &ast.FuncType{
 			Params: &ast.FieldList{
